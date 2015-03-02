@@ -16,8 +16,8 @@
 
 * Dependencies
     The following list of non-standard Python modules are used:
-        ** Joblib
-        ** pymongo
+        - Joblib
+        - pymongo
 * Database configuration
     ...
 * How to run tests
