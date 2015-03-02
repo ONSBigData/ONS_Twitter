@@ -8,6 +8,7 @@ Python version: 3.4
 
 from os import listdir
 from csv import QUOTE_MINIMAL, reader, writer
+import ons_twitter.data_formats as df
 import sys
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
@@ -131,4 +132,3 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
 
 
 import_one_csv(test_file, header=False)
-
