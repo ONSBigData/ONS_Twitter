@@ -9,7 +9,7 @@ Python version: 3.4
 from os import listdir
 from csv import QUOTE_MINIMAL, reader, writer
 import ons_twitter.data_formats as df
-import sys
+
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
 
@@ -22,13 +22,15 @@ def import_csv(infile, mongo_connection, header= False):
         one_file = True
 
 
-def import_one_csv(csv_file_name, mongo_connection=None, header=False):
+def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=False):
     """
     Import one csv file of tweets into a mongodb database
+
     :param csv_file_name: location on csv file containing tweets
     :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
     :param header: if true, then csv files contain headers and these need to be skipped
-    :return: none, prints diagnostics and inserts into database
+    :return:    tuple of number of read_tweets/no_geo tweets and failed_tweets,
+                prints diagnostics and inserts into database
     """
     # start reading csv file
     with open(csv_file_name, 'r') as in_tweets:
@@ -37,9 +39,9 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False):
 
         # start indexing, initiate lists for collecting tweets
         index = 0
-        failed_tweets = []
-        no_geo = []
         read_tweets = []
+        no_geo = []
+        failed_tweets = []
 
         # iterate over each row of input csv
         for row in input_rows:
@@ -48,32 +50,23 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False):
                 index += 1
                 continue
             else:
-                # try:
-                # unpack row
-                [unix_time, user_id, user_name,
-                 language, location, place, country,
-                 latitude, longitude, tweet_text] = row
-
-                # convert variables
-                unix_time = int(float(unix_time))
-                user_id = int(float(user_id))
-
-                # check if coordinates are missing
-                if longitude == "" or latitude == "":
-                    row[7] = "NA"
-                    row[8] = "NA"
-                    no_geo.append(row)
-                    continue
-                else:
-                    latitude = float(latitude)
-                    longitude = float(longitude)
-
-
                 index += 1
+                new_tweet = df.Tweet(row, method="csv")
 
-                # except:
-                #     print(sys.exc_info()[0])
-                #     failed_tweets.append(row)
+                if debug:
+                    new_tweet.get_info()
+                    if index == 6:
+                        break
+
+                # check if any errors occured
+                if new_tweet.get_errors() == 1:
+                    # change this to csv output
+                    no_geo.append(row)
+                elif new_tweet.get_errors() == 2:
+                    # change this to csv output
+                    failed_tweets.append(row)
+                else:
+                    read_tweets.append(new_tweet)
 
     # write failed tweets if any
     if len(failed_tweets) != 0:
@@ -88,6 +81,8 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False):
         with open(dump_geo, 'w', newline="\n") as dump_tweets:
             out_csv = writer(dump_tweets, delimiter=",", quoting=QUOTE_MINIMAL)
             out_csv.writerows(no_geo)
+
+    return len(read_tweets), len(no_geo), len(failed_tweets)
 
 
 def create_test_csv(input_csv, output_csv=None, num_rows=1000):
@@ -117,7 +112,7 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
             if index == 0:
                 index += 1
                 continue
-            elif index <= (num_rows + 1):
+            elif index <= (num_rows):
                 index += 1
                 tweets.append(row)
             else:
@@ -131,4 +126,6 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
     return len(tweets)
 
 
-import_one_csv(test_file, header=False)
+get_diagnostics = import_one_csv(test_file, header=False)
+print(get_diagnostics)
+
