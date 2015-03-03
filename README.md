@@ -18,12 +18,17 @@
     The following list of non-standard Python modules are used:
         - Joblib
         - pymongo
+        - GDAL
 * Database configuration
     ...
 * How to run tests
     ...
 * Deployment instructions
-    ...
+    - How to install GDAL on windows:
+    Download GDAL from [Unofficial Windows Libraries](http://www.lfd.uci.edu/~gohlke/pythonlibs/#gdal)  
+    Then add pip to Windows PATH by doing Win+Pause -> Advanced System Settings  
+     -> Environment Variables... -> PATH (edit) -> add ";C:\Python34\Scripts"
+     Then from the terminal (Win+R -> cmd) run "pip install package_name.whl"
 
 ### Contribution guidelines ###
 ...
