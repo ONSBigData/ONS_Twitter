@@ -29,7 +29,7 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
     :param csv_file_name: location on csv file containing tweets
     :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
     :param header: if true, then csv files contain headers and these need to be skipped
-    :return:    tuple of number of read_tweets/no_geo tweets and failed_tweets,
+    :return:    tuple of number of read_tweets/no_geo tweets/non_gb and failed_tweets,
                 prints diagnostics and inserts into database
     """
     # start reading csv file
@@ -42,6 +42,7 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
         read_tweets = []
         no_geo = []
         failed_tweets = []
+        non_gb = []
 
         # iterate over each row of input csv
         for row in input_rows:
@@ -58,13 +59,15 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
                     if index == 6:
                         break
 
-                # check if any errors occured
+                # check if any errors occurred
                 if new_tweet.get_errors() == 1:
                     # change this to csv output
                     no_geo.append(row)
                 elif new_tweet.get_errors() == 2:
                     # change this to csv output
                     failed_tweets.append(row)
+                elif new_tweet.get_country_code() != "GB":
+                    non_gb.append(row)
                 else:
                     read_tweets.append(new_tweet)
 
@@ -82,7 +85,14 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
             out_csv = writer(dump_tweets, delimiter=",", quoting=QUOTE_MINIMAL)
             out_csv.writerows(no_geo)
 
-    return len(read_tweets), len(no_geo), len(failed_tweets)
+    # dump all non GB tweets
+    if len(non_gb) != 0:
+        dump_gb = csv_file_name[:-4] + "_non_GB.csv"
+        with open(dump_gb, 'w', newline="\n") as dump_tweets:
+            out_csv = writer(dump_tweets, delimiter=",", quoting=QUOTE_MINIMAL)
+            out_csv.writerows(non_gb)
+
+    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets)
 
 
 def create_test_csv(input_csv, output_csv=None, num_rows=1000):

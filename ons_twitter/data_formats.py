@@ -130,7 +130,6 @@ class Tweet():
         These new variables are then inserted into the tweet object. Used during initialisation.
         """
 
-
         # dependent input
         self.dictionary["_id"] = (self.dictionary["user_id"],
                                   self.dictionary["unix_time"])
@@ -153,8 +152,17 @@ class Tweet():
         self.dictionary["time"]["dow"] = datetime.fromtimestamp(
             self.dictionary["unix_time"]).strftime("%a")
 
+    def find_tweet_address(self, mongo_connection):
+        pass
+
     def add_cluster_info(self, cluster_data):
         pass
+
+    def get_country_code(self):
+        """
+        Return the country code from the tweet. If non-GB then handle as special.
+        """
+        return self.dictionary["tweet"]["country"]
 
 
 def lat_long_to_osgb(lat_long):
@@ -251,5 +259,3 @@ def parse_wrong_data(data, debug=False):
         if debug:
             print("\n Final output:\n", data, "\n")
     return data
-
-
