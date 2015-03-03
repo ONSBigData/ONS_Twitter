@@ -14,7 +14,7 @@ import ons_twitter.data_formats as df
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
 
 
-def import_csv(infile, mongo_connection, header= False):
+def import_csv(infile, mongo_connection, header=False):
     try:
         csv_list = listdir(infile)
         one_file = False
@@ -48,6 +48,10 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
         for row in input_rows:
             if header and index == 0:
                 header_row = row
+                if debug:
+                    print("\nHeader row: ")
+                    print(header_row)
+                    print("\n ***")
                 index += 1
                 continue
             else:
@@ -122,7 +126,7 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
             if index == 0:
                 index += 1
                 continue
-            elif index <= (num_rows):
+            elif index <= num_rows:
                 index += 1
                 tweets.append(row)
             else:
@@ -138,4 +142,3 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
 
 get_diagnostics = import_one_csv(test_file, header=False)
 print(get_diagnostics)
-
