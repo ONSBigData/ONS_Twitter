@@ -13,9 +13,13 @@ mongo_address = connection.twitter.address
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
 
-get_diagnostics = import_one_csv(test_file,
-                                 mongo_address=mongo_address,
-                                 debug=True,
-                                 header=False,
-                                 debug_rows=100)
-print(get_diagnostics)
+# get_diagnostics = import_one_csv(test_file,
+#                                  mongo_address=mongo_address,
+#                                  debug=True,
+#                                  header=False,
+#                                  debug_rows=100)
+# print(get_diagnostics)
+test_file = "hahah.this_is.a.Tricky_test.csv"
+
+file_ext = find_file_extension(test_file)
+print(file_ext)

@@ -28,7 +28,8 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
     :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
     :param header: if true, then csv files contain headers and these need to be skipped
     :param mongo_address: pointer to mongodb database with geo_indexed address base
-    :return:    tuple of number of read_tweets/no_geo tweets/non_gb and failed_tweets,
+    :return:    tuple of number of read_tweets/no_geo tweets/non_gb and failed_tweets +
+                successfully converted tweets (no geo -> geo),
                 prints diagnostics and inserts into database
     """
     # start reading csv file
@@ -40,6 +41,7 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
         index = 0
         read_tweets = []
         no_geo = []
+        converted_no_geo =[]
         failed_tweets = []
         non_gb = []
 
@@ -63,10 +65,10 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
                         break
 
                 # check if any errors occurred
-                if new_tweet.get_errors() == 1:
+                if new_tweet.get_errors() in (1, 3):
                     # change this to csv output
                     no_geo.append(row)
-                elif new_tweet.get_errors() == 2:
+                elif new_tweet.get_errors() == -1:
                     # change this to csv output
                     failed_tweets.append(row)
                 elif new_tweet.get_country_code() != "GB":
@@ -74,6 +76,8 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
                 else:
                     # if all is good then find closest address
                     found_address = new_tweet.find_tweet_address(mongo_address)
+                    if new_tweet.get_errors() == 2:
+                        converted_no_geo.append(row)
                     if debug:
                         print("Address found: ", found_address)
                         new_tweet.get_info()
@@ -100,7 +104,7 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
             out_csv = writer(dump_tweets, delimiter=",", quoting=QUOTE_MINIMAL)
             out_csv.writerows(non_gb)
 
-    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets)
+    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo)
 
 
 def create_test_csv(input_csv, output_csv=None, num_rows=1000):
@@ -142,3 +146,45 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
             out_tweets.writerows(tweets)
 
     return len(tweets)
+
+
+def dump_errors(dumped_list, error_type, input_file,
+                output_folder="data/output/errors/"):
+    """
+    Dumps errors from a list to a new file. Works with both json and csv files.
+    Returns the number of objects in the list. If list is empty, then does not write.
+
+    :param dumped_list:     list of errors to dump, can be empty for no action
+    :param error_type:      type of error, will generate new folder for each type
+    :param input_file:      name of input file. Function keeps track of this, by
+                            appending name to output file. If csv then file will be output
+                            to csv. If json then a new json file will be created.
+    :param: output_folder:  folder for all errors
+    :return:                number of dumped objects
+    """
+
+    if len(dumped_list) == 0:
+        return 0
+    # else:
+    #     if file_type == "csv":
+    #         pass
+    #     elif file_type = "json":
+    #         pass
+    #     else:
+    #         print("\n   ******\nWrong file_type supplied to dump_errors function!\n\n")
+
+
+def find_file_extension(file_name):
+    """
+    Returns the extension of file_name supplied as string.
+    :param file_name: String of a file name.
+    :return:    File extension type as a string.
+    """
+    start_index = -1
+    found = 0
+    while found >= 0:
+        found = file_name.find(".", start_index +1)
+        if found >= 0:
+            start_index = found
+
+    return file_name[start_index:]
