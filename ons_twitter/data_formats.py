@@ -8,6 +8,7 @@ Python version: 3.4
 from datetime import datetime
 from osgeo import ogr, osr
 from bson.son import SON
+from json import load as json_load
 
 
 class Tweet():
@@ -55,7 +56,8 @@ class Tweet():
                                                'msoa11': "NA",
                                                'lsoa11': "NA",
                                                'oslaua': "NA",
-                                               'osward': "NA"},
+                                               'osward': "NA",
+                                               "wz11": "NA"},
                                     "classification": {
                                         "full": "NA",
                                         "abbreviated": "NA"},
@@ -259,8 +261,7 @@ def parse_wrong_data(data, debug=False):
     string_data = ",".join(new_data)
 
     # read json document
-    from json import load as jload
-    language_codes_json = jload(open("ons_twitter/twitter_lang_codes.JSON"))
+    language_codes_json = json_load(open("ons_twitter/twitter_lang_codes.JSON"))
     language_codes = []
     for one_item in language_codes_json:
         language_codes.append(one_item["code"])

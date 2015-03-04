@@ -82,7 +82,7 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
                 elif new_tweet.get_country_code() != "GB":
                     non_gb.append(row)
                 else:
-                    #if all is good then find closest address
+                    # if all is good then find closest address
                     found_address = new_tweet.find_tweet_address(mongo_address)
 
                     # separate tweet into different category if columns have been moved successfully
@@ -177,8 +177,7 @@ def dump_errors(dumped_list, error_type, input_file,
         return 0
     else:
         file_ext = find_file_extension(input_file)
-        if not path.exists(output_folder + error_type + "/"):
-            makedirs(output_folder + error_type + "/")
+        create_folder(output_folder + error_type + "/")
         if file_ext == ".csv":
             outfile = output_folder + error_type + "/" + find_file_name(input_file)[1][:-len(file_ext)] + \
                 "_" + error_type + file_ext
@@ -222,3 +221,13 @@ def find_file_name(file_name):
         if found >= 0:
             start_index = found
     return file_name[:start_index + 1], file_name[(start_index + 1):]
+
+
+def create_folder(folder_loc):
+    """
+    Create folder in system recursively. i.e. create one if one doesn't exist
+    :param folder_loc: String pointing to the location of new folder.
+    :return:
+    """
+    if not path.exists(folder_loc):
+            makedirs(folder_loc)
