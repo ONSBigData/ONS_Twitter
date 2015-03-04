@@ -7,6 +7,7 @@ Python version: 3.4
 
 from datetime import datetime
 from osgeo import ogr, osr
+from bson.son import SON
 
 
 class Tweet():
@@ -153,7 +154,32 @@ class Tweet():
             self.dictionary["unix_time"]).strftime("%a")
 
     def find_tweet_address(self, mongo_connection):
-        pass
+        """
+        Finds the closest address point to the tweet from geo-indexed mongodb address base.
+        :param mongo_connection: Geo-index mongodb collection.
+        :return: 1 if address is found, 0 if no address is found within 300m of tweet.
+        """
+        # construct query
+        query = {"coordinates": SON([("$near", self.dictionary["tweet"]["coordinates"]),
+                                     ("$maxDistance", 300)])}
+        # ask for single closest address if any
+        closest_address_list = tuple(mongo_connection.find(query, {"_id": 0}).limit(1))
+
+        # check if it has found any
+        if len(closest_address_list) == 0:
+            # if there are no address within 300m then add error description
+            self.error_description.append("No address found within 300 meters")
+            # add NA as distance
+            self.dictionary["tweet"]["address"]["distance"] = "NA"
+            return 1
+        else:
+            # add address
+            self.dictionary["tweet"]["address"] = closest_address_list[0]
+            # add distance (rounded to 3 decimal places
+            self.dictionary["tweet"]["address"]["distance"] = distance(
+                self.dictionary["tweet"]["coordinates"],
+                closest_address_list[0]["coordinates"])
+            return 0
 
     def add_cluster_info(self, cluster_data):
         pass
@@ -257,3 +283,15 @@ def parse_wrong_data(data, debug=False):
     if debug:
         print("\n Final output:\n", data, "\n")
     return data
+
+
+def distance(point1, point2):
+    """
+    Given two tuples or lists, returns the distance between the two points, rounded to 3 decimal places.
+    :param point1: First point of coordinates. (Tuple/list)
+    :param point2: Second point of coordinates. (Tuple/list)
+    :return: float
+    """
+
+    euclidean_squared = ((point1[0] - point2[0]) ** 2) + ((point1[1] - point2[1]) ** 2)
+    return round(euclidean_squared ** 0.5, 3)

@@ -11,9 +11,6 @@ from csv import QUOTE_MINIMAL, reader, writer
 import ons_twitter.data_formats as df
 
 
-test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
-
-
 def import_csv(infile, mongo_connection, header=False):
     try:
         csv_list = listdir(infile)
@@ -22,13 +19,15 @@ def import_csv(infile, mongo_connection, header=False):
         one_file = True
 
 
-def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=False):
+def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, header=False, debug=False,
+                   debug_rows = 5):
     """
     Import one csv file of tweets into a mongodb database
 
     :param csv_file_name: location on csv file containing tweets
     :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
     :param header: if true, then csv files contain headers and these need to be skipped
+    :param mongo_address: pointer to mongodb database with geo_indexed address base
     :return:    tuple of number of read_tweets/no_geo tweets/non_gb and failed_tweets,
                 prints diagnostics and inserts into database
     """
@@ -60,7 +59,7 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
 
                 if debug:
                     new_tweet.get_info()
-                    if index == 6:
+                    if index == debug_rows:
                         break
 
                 # check if any errors occurred
@@ -73,6 +72,11 @@ def import_one_csv(csv_file_name, mongo_connection=None, header=False, debug=Fal
                 elif new_tweet.get_country_code() != "GB":
                     non_gb.append(row)
                 else:
+                    # if all is good then find closest address
+                    found_address = new_tweet.find_tweet_address(mongo_address)
+                    if debug:
+                        print("Address found: ", found_address)
+                        new_tweet.get_info()
                     read_tweets.append(new_tweet)
 
     # write failed tweets if any
@@ -138,7 +142,3 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
             out_tweets.writerows(tweets)
 
     return len(tweets)
-
-
-get_diagnostics = import_one_csv(test_file, header=False)
-print(get_diagnostics)
