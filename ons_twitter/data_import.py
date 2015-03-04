@@ -13,7 +13,9 @@ from ons_twitter.supporting_functions import *
 from datetime import datetime
 
 
-def import_csv(infile, mongo_connection, header=False):
+def import_csv(infile,
+               mongo_connection,
+               header=False):
     try:
         csv_list = listdir(infile)
         one_file = False
@@ -21,8 +23,13 @@ def import_csv(infile, mongo_connection, header=False):
         one_file = True
 
 
-def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, header=False, debug=False,
-                   debug_rows=None, print_progress=False):
+def import_one_csv(csv_file_name,
+                   mongo_connection=None,
+                   mongo_address=None,
+                   header=False,
+                   debug=False,
+                   debug_rows=None,
+                   print_progress=False):
     """
     Import one csv file of tweets into a mongodb database
 
@@ -118,7 +125,9 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
     return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo)
 
 
-def create_test_csv(input_csv, output_csv=None, num_rows=1000):
+def create_test_csv(input_csv,
+                    output_csv=None,
+                    num_rows=1000):
     """
     Create a new csv file with a subset of tweets from original raw data.
     Use for debugging code.
@@ -159,7 +168,9 @@ def create_test_csv(input_csv, output_csv=None, num_rows=1000):
     return len(tweets)
 
 
-def dump_errors(dumped_list, error_type, input_file,
+def dump_errors(dumped_list,
+                error_type,
+                input_file,
                 output_folder="data/output/errors/"):
     """
     Dumps errors from a list to a new file. Works with both json and csv files.
@@ -190,5 +201,3 @@ def dump_errors(dumped_list, error_type, input_file,
         else:
             print("input file: ", input_file, "\n must be of type .csv or .JSON")
             return -1
-
-

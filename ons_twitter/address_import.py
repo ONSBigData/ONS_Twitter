@@ -128,7 +128,7 @@ class AddressBase():
         self.collection.clear()
         self.dump_index += 1
 
-    def import_address_csv(self, input_file_location, header=True, terminate_at=0):
+    def import_address_csv(self, input_file_location, header=True, terminate_at=-1):
         """
         Imports a csv file for insertion into address base.
         :param input_file_location: Location of address base file.

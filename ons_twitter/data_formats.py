@@ -9,6 +9,7 @@ from datetime import datetime
 from osgeo import ogr, osr
 from bson.son import SON
 from json import load as json_load
+from ons_twitter.supporting_functions import distance
 
 
 class Tweet():
@@ -298,15 +299,3 @@ def parse_wrong_data(data, debug=False):
     if debug:
         print("\n Final output:\n", data, "\n")
     return data
-
-
-def distance(point1, point2):
-    """
-    Given two tuples or lists, returns the distance between the two points, rounded to 3 decimal places.
-    :param point1: First point of coordinates. (Tuple/list)
-    :param point2: Second point of coordinates. (Tuple/list)
-    :return: float
-    """
-
-    euclidean_squared = ((point1[0] - point2[0]) ** 2) + ((point1[1] - point2[1]) ** 2)
-    return round(euclidean_squared ** 0.5, 3)

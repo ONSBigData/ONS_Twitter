@@ -30,6 +30,6 @@ file_ext = find_file_name(test_file)
 print(file_ext)
 
 address_base_loc = "data/input/address/address_base.csv"
-address_base = AddressBase("data/output/", 10)
-a = address_base.import_address_csv(address_base_loc, terminate_at=55)
+address_base = AddressBase("data/output/", 100000)
+a = address_base.import_address_csv(address_base_loc, terminate_at=-1)
 print(a)

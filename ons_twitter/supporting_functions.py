@@ -48,3 +48,15 @@ def create_folder(folder_loc):
     """
     if not path.exists(folder_loc):
             makedirs(folder_loc)
+
+
+def distance(point1, point2):
+    """
+    Given two tuples or lists, returns the distance between the two points, rounded to 3 decimal places.
+    :param point1: First point of coordinates. (Tuple/list)
+    :param point2: Second point of coordinates. (Tuple/list)
+    :return: float
+    """
+
+    euclidean_squared = ((point1[0] - point2[0]) ** 2) + ((point1[1] - point2[1]) ** 2)
+    return round(euclidean_squared ** 0.5, 3)
