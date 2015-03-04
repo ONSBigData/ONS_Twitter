@@ -17,17 +17,17 @@ create_test_csv(original_file)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
 
-# get_diagnostics = import_one_csv(test_file,
-#                                  mongo_address=mongo_address,
-#                                  debug=False,
-#                                  header=False,
-#                                  debug_rows=1000,
-#                                  print_progress=True)
-# print(get_diagnostics)
-# test_file = "data/input/test.csv"
-#
-# file_ext = find_file_name(test_file)
-# print(file_ext)
+get_diagnostics = import_one_csv(test_file,
+                                 mongo_address=mongo_address,
+                                 debug=False,
+                                 header=False,
+                                 debug_rows=1000,
+                                 print_progress=True)
+print(get_diagnostics)
+test_file = "data/input/test.csv"
+
+file_ext = find_file_name(test_file)
+print(file_ext)
 
 address_base_loc = "data/input/address/address_base.csv"
 address_base = AddressBase("data/output/", 10)

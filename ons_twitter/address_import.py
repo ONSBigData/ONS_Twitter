@@ -6,10 +6,8 @@ Python version: 3.4
 """
 
 from csv import reader
-from pymongo import MongoClient
 from bson.son import SON
 from json import dump
-from os import path
 
 
 class Address():
