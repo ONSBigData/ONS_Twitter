@@ -84,14 +84,20 @@ def import_one_csv(csv_file_name, mongo_connection=None, mongo_address=None, hea
                 else:
                     #if all is good then find closest address
                     found_address = new_tweet.find_tweet_address(mongo_address)
+
+                    # separate tweet into different category if columns have been moved successfully
                     if new_tweet.get_errors() == 2:
                         converted_no_geo.append(row)
+
+                    # print debug info
                     if debug:
                         print("Address found: ", found_address)
                         new_tweet.get_info()
-                    read_tweets.append(new_tweet)
-                    pass
 
+                    # add tweet to final list
+                    read_tweets.append(new_tweet)
+
+                # print progress if needed
                 if print_progress:
                     if index % 10000 == 0:
                         print(index, datetime.now())
