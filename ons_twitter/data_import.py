@@ -11,6 +11,7 @@ from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
+from pymongo.errors import DuplicateKeyError
 
 
 def import_csv(infile,
@@ -73,6 +74,8 @@ def import_one_csv(csv_file_name,
                 new_tweet = Tweet(row, method="csv")
 
                 if debug:
+                    # print tweet before finding address
+                    print("\n\n **** Tweet read in ")
                     new_tweet.get_info()
                     if index == debug_rows:
                         break
@@ -99,11 +102,11 @@ def import_one_csv(csv_file_name,
 
                     # print debug info
                     if debug:
-                        print("Address found: ", found_address)
+                        print("\n\n *** Tweet after address matching!", found_address)
                         new_tweet.get_info()
 
                     # add tweet to final list
-                    read_tweets.append(new_tweet)
+                    read_tweets.append(new_tweet.dictionary)
 
                 # print progress if needed
                 if print_progress:
@@ -122,7 +125,18 @@ def import_one_csv(csv_file_name,
     # dump successfully converted non_GBs. These will still be processed!
     dump_errors(converted_no_geo, "successful_non_geo", csv_file_name)
 
-    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo)
+    # put correct tweets into specified mongo_db database
+    duplicates = []
+    for tweet in read_tweets:
+        try:
+            mongo_connection.insert(tweet)
+        except DuplicateKeyError:
+            duplicates.append(tweet)
+
+    # fix this! convert back to csv!
+    # dump_errors(duplicates, "duplicates", csv_file_name)
+
+    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo), len(duplicates)
 
 
 def create_test_csv(input_csv,

@@ -18,20 +18,22 @@ original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Twee
 create_test_csv(original_file)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
+test_twitter_mongo = pymongo.MongoClient("127.0.0.1:27017").test.tweets
 
-# get_diagnostics = import_one_csv(test_file,
-#                                  mongo_address=mongo_address,
-#                                  debug=False,
-#                                  header=False,
-#                                  debug_rows=1000,
-#                                  print_progress=True)
-# print(get_diagnostics)
-# test_file = "data/input/test.csv"
-#
-# file_ext = find_file_name(test_file)
-# print(file_ext)
+get_diagnostics = import_one_csv(test_file,
+                                 mongo_connection=test_twitter_mongo,
+                                 mongo_address=mongo_address,
+                                 debug=True,
+                                 header=False,
+                                 debug_rows=10,
+                                 print_progress=True)
+print(get_diagnostics)
+test_file = "data/input/test.csv"
 
-address_base_loc = "data/input/address/address_base.csv"
-address_base = AddressBase("data/output/address/", 100000)
-a = address_base.import_address_csv(address_base_loc, terminate_at=-1)
-print(a)
+file_ext = find_file_name(test_file)
+print(file_ext)
+
+# address_base_loc = "data/input/address/address_base.csv"
+# address_base = AddressBase("data/output/address/", 100000)
+# a = address_base.import_address_csv(address_base_loc, terminate_at=-1)
+# print(a)

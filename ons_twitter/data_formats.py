@@ -34,7 +34,7 @@ class Tweet():
         self.error_number = 0
         self.error_description = []
 
-        empty_dictionary = {'_id': [],
+        empty_dictionary = {'_id': "NA",
                             'user_id': "NA",
                             'unix_time': "NA",
                             'time': {
@@ -90,7 +90,7 @@ class Tweet():
                 self.dictionary["tweet"]["location"] = data[4]
                 self.dictionary["tweet"]["place"] = data[5]
                 self.dictionary["tweet"]["country"] = data[6]
-                self.dictionary["tweet"]["text"] = data[9]
+                self.dictionary["tweet"]["text"] = data[9].replace('"', "")
                 if wrong_data_conversion:
                     self.error_number = 2
             except ValueError:
@@ -116,6 +116,7 @@ class Tweet():
 
             # add time variables
             self.generate_time_input()
+            self.dictionary["_id"] = str(self.dictionary["user_id"]) + "_" + str(self.dictionary["unix_time"])
 
         elif method == "json":
             pass
