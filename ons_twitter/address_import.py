@@ -8,6 +8,9 @@ Python version: 3.4
 from csv import reader
 from bson.son import SON
 from json import dump
+from datetime import datetime
+from ons_twitter.supporting_functions import create_folder
+from os.path import isfile
 
 
 class Address():
@@ -91,19 +94,22 @@ class AddressBase():
     Object with collection of addresses that automatically dumps json files as populated.
     """
 
-    def __init__(self, folder_name, chunk_size):
+    def __init__(self, folder_name, chunk_size=100000, over_write_previous=True):
         """
         Initialise AddressBase object.
         :param folder_name:     Folder to output JSON files to.
         :param chunk_size:      Number of addresses in each chunk of output.
                                 Set this to -1 for one file.
+        :param over_write_previous: False if files created need not be overwritten.
         :return:                AddressBase object.
         """
+        create_folder(folder_name)
         self.collection = []
         self.folder_name = folder_name
         self.dump_index = 0
         self.chunk_size = chunk_size
         self.file_names = []
+        self.over_write = over_write_previous
 
     def add_address(self, new_address):
         """
@@ -121,11 +127,18 @@ class AddressBase():
         Function to write addresses to a single JSON file.
         :return: none
         """
+        # create new filename
         file_name = self.folder_name + str(self.dump_index) + ".JSON"
         self.file_names.append(file_name)
-        with open(file_name, 'w') as outfile:
-            dump(self.collection, outfile)
+
+        # only write if either file doesn't exist or overwrite is specified
+        if self.over_write or not isfile(file_name):
+            with open(file_name, 'w', newline="\n") as outfile:
+                dump(self.collection, outfile, indent=2)
+
+        # clear the collection and move onto next index
         self.collection.clear()
+        print("Dumped index: ", self.dump_index, datetime.now())
         self.dump_index += 1
 
     def import_address_csv(self, input_file_location, header=True, terminate_at=-1):
@@ -136,6 +149,10 @@ class AddressBase():
         :param terminate_at: Integer for debugging. Process terminates after this many rows.
         :return: a list of all output files
         """
+        # add one to break point if header is true
+        if header:
+            terminate_at += 1
+
         with open(input_file_location, 'r', newline="\n") as open_csv:
             address_csv = reader(open_csv)
             index = 0
@@ -169,6 +186,7 @@ class AddressBase():
                         break
 
             # write any remaining files
-            self.write_to_json()
+            if len(self.collection) != 0:
+                self.write_to_json()
 
         return self.file_names

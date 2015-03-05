@@ -6,7 +6,7 @@ Date:           02/March/2015
 Python version: 3.4
 """
 
-from os import listdir
+from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 import ons_twitter.data_formats as df
 from ons_twitter.supporting_functions import *
@@ -201,3 +201,33 @@ def dump_errors(dumped_list,
         else:
             print("input file: ", input_file, "\n must be of type .csv or .JSON")
             return -1
+
+
+def insert_json_mongo(folder_name, database, collection, mongo_ip="127.0.0.1:27017", upsert=False):
+    """
+    Import all JSON files to a specified mongodb server into database.collection.
+
+    :param folder_name:     Folder containing all JSON objects to be imported.
+    :param database:        Name of database where import will be made.
+    :param collection:      Name of collection to be updated.
+    :param mongo_ip:        IP address of mongo host (with port number). Base value: local mongo at
+                            127.0.0.1:27017
+    :param upsert:          If true then import will be made with upsert. See mongodb documentation.
+    :return:                Number of files inserted.
+    """
+
+    # find all files in directory
+    file_names = listdir(folder_name)
+
+    # construct command wrapper
+    if upsert:
+        wrapper = "mongoimport --host %s -d %s -c %s --jsonArray --upsert --file " % (mongo_ip, database, collection)
+    else:
+        wrapper = "mongoimport --host %s -d %s -c %s --jsonArray --file " % (mongo_ip, database, collection)
+
+    # run all commands
+    for file_name in file_names:
+        print(wrapper + folder_name + file_name)
+        system(wrapper + folder_name + file_name)
+
+    return len(file_names)
