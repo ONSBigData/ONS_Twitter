@@ -7,7 +7,6 @@ Python version: 3.4
 
 from ons_twitter.data_formats import *
 from ons_twitter.data_import import insert_json_mongo
-from datetime import datetime
 
 # specify constants
 address_base_csv_location = "data/input/address/address_base.csv"

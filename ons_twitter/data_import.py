@@ -8,9 +8,10 @@ Python version: 3.4
 
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
+from datetime import datetime
+
 import ons_twitter.data_formats as df
 from ons_twitter.supporting_functions import *
-from datetime import datetime
 
 
 def import_csv(infile,

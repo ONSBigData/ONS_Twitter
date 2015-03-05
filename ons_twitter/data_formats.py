@@ -6,14 +6,16 @@ Date:           02/March/2015
 Python version: 3.4
 """
 
-from osgeo import ogr, osr
 from json import load, dump
-from ons_twitter.supporting_functions import distance
 from csv import reader
-from bson.son import SON
 from datetime import datetime
-from ons_twitter.supporting_functions import create_folder
 from os.path import isfile
+
+from bson.son import SON
+
+from osgeo import ogr, osr
+from ons_twitter.supporting_functions import distance
+from ons_twitter.supporting_functions import create_folder
 
 
 class Tweet():

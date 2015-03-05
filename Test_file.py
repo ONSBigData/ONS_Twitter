@@ -5,9 +5,11 @@ Date:
 Python version: 3.4
 """
 
+import pymongo
+
 from ons_twitter.data_import import *
 from ons_twitter.data_formats import *
-import pymongo
+
 
 connection = pymongo.MongoClient("192.168.0.82:27017")
 mongo_address = connection.twitter.address
