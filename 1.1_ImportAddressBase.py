@@ -5,7 +5,7 @@ Date:           04/March/2015
 Python version: 3.4
 """
 
-from ons_twitter.address_import import *
+from ons_twitter.data_formats import *
 from ons_twitter.data_import import insert_json_mongo
 from datetime import datetime
 
