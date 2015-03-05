@@ -203,7 +203,11 @@ def dump_errors(dumped_list,
             return -1
 
 
-def insert_json_mongo(folder_name, database, collection, mongo_ip="127.0.0.1:27017", upsert=False):
+def insert_json_mongo(folder_name,
+                      database,
+                      collection,
+                      mongo_ip="127.0.0.1:27017",
+                      upsert=False):
     """
     Import all JSON files to a specified mongodb server into database.collection.
 

@@ -32,7 +32,7 @@ insert_list = address_base.import_address_csv(input_file_location=address_base_c
 print("\nJSON conversion finished  ", datetime.now(),
       "\ncreated a total of ", len(insert_list), "files")
 
-
+# import into mongodb database
 number_files = insert_json_mongo(folder_name=address_json_folder,
                                  database=database_name,
                                  collection=collection_name,
