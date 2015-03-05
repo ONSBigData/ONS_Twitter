@@ -9,8 +9,7 @@ Python version: 3.4
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
-
-import ons_twitter.data_formats as df
+from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 
 
@@ -71,7 +70,7 @@ def import_one_csv(csv_file_name,
                 continue
             else:
                 index += 1
-                new_tweet = df.Tweet(row, method="csv")
+                new_tweet = Tweet(row, method="csv")
 
                 if debug:
                     new_tweet.get_info()

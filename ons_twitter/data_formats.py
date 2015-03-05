@@ -10,9 +10,7 @@ from json import load, dump
 from csv import reader
 from datetime import datetime
 from os.path import isfile
-
 from bson.son import SON
-
 from osgeo import ogr, osr
 from ons_twitter.supporting_functions import distance
 from ons_twitter.supporting_functions import create_folder
