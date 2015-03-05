@@ -225,9 +225,14 @@ def insert_json_mongo(folder_name, database, collection, mongo_ip="127.0.0.1:270
     else:
         wrapper = "mongoimport --host %s -d %s -c %s --jsonArray --file " % (mongo_ip, database, collection)
 
+    start_time = datetime.now()
+    print("\n\n ***** Start mongodb inserts ****", start_time)
+
     # run all commands
     for file_name in file_names:
+        print("\n **** Starting insert: ", datetime.now())
         print(wrapper + folder_name + file_name)
         system(wrapper + folder_name + file_name)
 
+    print("\nFinished inserts in: ", datetime.now() - start_time)
     return len(file_names)

@@ -7,16 +7,33 @@ Python version: 3.4
 
 from ons_twitter.address_import import *
 from ons_twitter.data_import import insert_json_mongo
-from os import system
+from datetime import datetime
+
+# specify constants
+address_base_csv_location = "data/input/address/address_base.csv"
+address_json_folder = "data/output/address/"
+
+mongo_ip = "192.168.0.82:27017"
+database_name = "twitter"
+collection_name = "address"
+
+# verbose
+print("\n ***** Start converting csv to JSON", "\nfrom: ", address_base_csv_location,
+      "\ninto : ", address_json_folder, "\n", datetime.now())
 
 # convert large csv file to small JSON files
-address_base_loc = "data/input/address/address_base.csv"
-address_base = AddressBase("data/output/address/", 200, over_write_previous=True)
-insert_list = address_base.import_address_csv(address_base_loc, terminate_at=800)
-print(insert_list)
+address_base = AddressBase(folder_name=address_json_folder,
+                           chunk_size=100000,
+                           over_write_previous=True)
 
-number_files = insert_json_mongo("data/output/address/",
-                                 "twitter",
-                                 "address")
+insert_list = address_base.import_address_csv(input_file_location=address_base_csv_location,
+                                              terminate_at=-1)
 
-print(number_files)
+print("\nJSON conversion finished  ", datetime.now(),
+      "\ncreated a total of ", len(insert_list), "files")
+
+
+number_files = insert_json_mongo(folder_name=address_json_folder,
+                                 database=database_name,
+                                 collection=collection_name,
+                                 mongo_ip=mongo_ip)
