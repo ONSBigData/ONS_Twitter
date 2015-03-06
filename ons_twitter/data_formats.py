@@ -12,6 +12,7 @@ from datetime import datetime
 from os.path import isfile
 from bson.son import SON
 from osgeo import ogr, osr
+from pymongo.errors import OperationFailure
 from ons_twitter.supporting_functions import distance
 from ons_twitter.supporting_functions import create_folder
 
@@ -185,7 +186,11 @@ class Tweet():
         query = {"coordinates": SON([("$near", self.dictionary["tweet"]["coordinates"]),
                                      ("$maxDistance", 300)])}
         # ask for single closest address if any
-        closest_address_list = tuple(mongo_connection.find(query, {"_id": 0}).limit(1))
+        try:
+            closest_address_list = tuple(mongo_connection.find(query, {"_id": 0}).limit(1))
+        except OperationFailure:
+            print("Warning! Address base unavailable!")
+            closest_address_list = []
 
         # check if it has found any
         if len(closest_address_list) == 0:
@@ -211,6 +216,22 @@ class Tweet():
         Return the country code from the tweet. If non-GB then handle as special.
         """
         return self.dictionary["tweet"]["country"]
+
+    def get_csv_format(self):
+        """
+        Return tweet as original csv row.
+        """
+        csv_row = [self.dictionary["unix_time"],
+                   self.dictionary["user_id"],
+                   self.dictionary["tweet"]["user_name"],
+                   self.dictionary["tweet"]["language"],
+                   self.dictionary["tweet"]["location"],
+                   self.dictionary["tweet"]["place"],
+                   self.dictionary["tweet"]["country"],
+                   self.dictionary["tweet"]["lat_long"][0],
+                   self.dictionary["tweet"]["lat_long"][1],
+                   self.dictionary["tweet"]["text"]]
+        return csv_row
 
 
 def lat_long_to_osgb(lat_long):

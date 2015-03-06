@@ -58,6 +58,7 @@ def import_one_csv(csv_file_name,
         converted_no_geo = []
         failed_tweets = []
         non_gb = []
+        no_address = []
 
         # iterate over each row of input csv
         for row in input_rows:
@@ -96,6 +97,10 @@ def import_one_csv(csv_file_name,
                     # if all is good then find closest address
                     found_address = new_tweet.find_tweet_address(mongo_address)
 
+                    # if there are no address then keep track of it
+                    if found_address == 1:
+                        no_address.append(row)
+
                     # separate tweet into different category if columns have been moved successfully
                     if new_tweet.get_errors() == 2:
                         converted_no_geo.append(row)
@@ -106,7 +111,7 @@ def import_one_csv(csv_file_name,
                         new_tweet.get_info()
 
                     # add tweet to final list
-                    read_tweets.append(new_tweet.dictionary)
+                    read_tweets.append(new_tweet)
 
                 # print progress if needed
                 if print_progress:
@@ -125,16 +130,19 @@ def import_one_csv(csv_file_name,
     # dump successfully converted non_GBs. These will still be processed!
     dump_errors(converted_no_geo, "successful_non_geo", csv_file_name)
 
+    # dump no address tweets. Will still go into pipeline!
+    dump_errors(no_address, "no_address_found", csv_file_name)
+
     # put correct tweets into specified mongo_db database
     duplicates = []
     for tweet in read_tweets:
         try:
-            mongo_connection.insert(tweet)
+            mongo_connection.insert(tweet.dictionary)
         except DuplicateKeyError:
-            duplicates.append(tweet)
+            duplicates.append(tweet.get_csv_format())
 
-    # fix this! convert back to csv!
-    # dump_errors(duplicates, "duplicates", csv_file_name)
+    # dump all duplicate tweets
+    dump_errors(duplicates, "duplicates", csv_file_name)
 
     return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo), len(duplicates)
 
