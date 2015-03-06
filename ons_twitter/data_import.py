@@ -38,7 +38,8 @@ def import_one_csv(csv_file_name,
     :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
     :param header: if true, then csv files contain headers and these need to be skipped
     :param mongo_address: pointer to mongodb database with geo_indexed address base
-    :return:    tuple of number of read_tweets/no_geo tweets/non_gb and failed_tweets +
+    :return:    tuple of number of
+                read_tweets/no_geo tweets/non_gb and failed_tweets/ converted_no_geo/ no_address / duplicates
                 successfully converted tweets (no geo -> geo),
                 prints diagnostics and inserts into database
     """
@@ -144,7 +145,7 @@ def import_one_csv(csv_file_name,
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
 
-    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo), len(duplicates)
+    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo), len(no_address), len(duplicates)
 
 
 def create_test_csv(input_csv,

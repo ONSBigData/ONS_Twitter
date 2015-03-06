@@ -11,8 +11,7 @@ from ons_twitter.data_import import *
 from ons_twitter.data_formats import *
 
 
-connection = pymongo.MongoClient("127.0.0.1:27017")
-mongo_address = connection.twitter.address
+mongo_address = pymongo.MongoClient("127.0.0.1:27017").twitter.address
 
 original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
 create_test_csv(original_file)
