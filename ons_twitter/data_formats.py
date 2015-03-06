@@ -421,6 +421,7 @@ class AddressBase():
         :return: none
         """
         # create new filename
+        # leading zeroes are there to increase read performance
         file_name = self.folder_name + str(self.dump_index).zfill(6) + ".JSON"
         self.file_names.append(file_name)
 

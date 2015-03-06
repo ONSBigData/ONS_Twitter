@@ -50,7 +50,8 @@ def create_folder(folder_loc):
             makedirs(folder_loc)
 
 
-def distance(point1, point2):
+def distance(point1,
+             point2):
     """
     Given two tuples or lists, returns the distance between the two points, rounded to 3 decimal places.
     :param point1: First point of coordinates. (Tuple/list)
