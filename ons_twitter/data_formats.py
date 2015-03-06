@@ -421,7 +421,7 @@ class AddressBase():
         :return: none
         """
         # create new filename
-        file_name = self.folder_name + str(self.dump_index) + ".JSON"
+        file_name = self.folder_name + str(self.dump_index).zfill(6) + ".JSON"
         self.file_names.append(file_name)
 
         # only write if either file doesn't exist or overwrite is specified
