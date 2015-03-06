@@ -22,7 +22,7 @@ print("\n ***** Start converting csv to JSON", "\nfrom: ", address_base_csv_loca
 
 # convert large csv file to small JSON files
 address_base = AddressBase(folder_name=address_json_folder,
-                           chunk_size=10000,
+                           chunk_size=1000,
                            over_write_previous=True)
 
 insert_list = address_base.import_address_csv(input_file_location=address_base_csv_location,
