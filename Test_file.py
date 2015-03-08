@@ -6,15 +6,14 @@ Python version: 3.4
 """
 
 import pymongo
-
 from ons_twitter.data_import import *
 from ons_twitter.data_formats import *
 
-
+start_time = datetime.now()
 mongo_address = pymongo.MongoClient("127.0.0.1:27017").twitter.address
 
-original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
-create_test_csv(original_file)
+# original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
+# create_test_csv(original_file)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
 test_twitter_mongo = pymongo.MongoClient("127.0.0.1:27017").test.tweets
@@ -29,9 +28,7 @@ get_diagnostics = import_one_csv(test_file,
 print(get_diagnostics)
 test_file = "data/input/test.csv"
 
-file_ext = find_file_name(test_file)
-print(file_ext)
-
+print(datetime.now() - start_time)
 # address_base_loc = "data/input/address/address_base.csv"
 # address_base = AddressBase("data/output/address/", 100000)
 # a = address_base.import_address_csv(address_base_loc, terminate_at=-1)
