@@ -30,7 +30,7 @@ def import_one_csv(csv_file_name,
                    header=False,
                    debug=False,
                    debug_rows=None,
-                   print_progress=False):
+                   print_progress=0):
     """
     Import one csv file of tweets into a mongodb database
 
@@ -38,6 +38,8 @@ def import_one_csv(csv_file_name,
     :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
     :param header: if true, then csv files contain headers and these need to be skipped
     :param mongo_address: pointer to mongodb database with geo_indexed address base
+    :param print_progress:  integer specifying the number of reads at which diagnostics should be
+                            printed. 0 will print no diagnostics
     :return:    tuple of number of
                 read_tweets/no_geo tweets/non_gb and failed_tweets/ converted_no_geo/ no_address / duplicates
                 successfully converted tweets (no geo -> geo),
@@ -115,8 +117,8 @@ def import_one_csv(csv_file_name,
                     read_tweets.append(new_tweet)
 
                 # print progress if needed
-                if print_progress:
-                    if index % 10000 == 0:
+                if print_progress > 0:
+                    if index % print_progress == 0:
                         print(index, datetime.now())
 
     # write failed tweets if any
