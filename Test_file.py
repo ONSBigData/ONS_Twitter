@@ -24,7 +24,11 @@ get_diagnostics = import_one_csv(original_file,
                                  debug=False,
                                  header=False,
                                  debug_rows=10000,
-                                 print_progress=100)
+                                 print_progress=1000)
+
+# 1.06 minutes for 20,000 entries using csv reader
+# 34s for 10,000 entries using csv reader
+
 print(get_diagnostics)
 test_file = "data/input/test.csv"
 

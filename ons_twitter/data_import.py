@@ -147,7 +147,9 @@ def import_one_csv(csv_file_name,
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
 
-    return len(read_tweets), len(no_geo), len(non_gb), len(failed_tweets), len(converted_no_geo), len(no_address), len(duplicates)
+    return (len(read_tweets), len(no_geo),
+            len(non_gb), len(failed_tweets),
+            len(converted_no_geo), len(no_address), len(duplicates))
 
 
 def create_test_csv(input_csv,

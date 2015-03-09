@@ -92,6 +92,7 @@ class Tweet():
                 self.dictionary["tweet"]["place"] = data[5]
                 self.dictionary["tweet"]["country"] = data[6]
                 self.dictionary["tweet"]["text"] = data[9].replace('"', "")
+                self.dictionary["chunk_id"] = self.dictionary["user_id"] % 1000
                 if wrong_data_conversion:
                     self.error_number = 2
             except ValueError:
