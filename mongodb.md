@@ -12,7 +12,7 @@
                                 "max_value": {$max: "$coordinates"}}})`
 * add geo_indexing:  
     min: 8001,  max: 1216407
-    `db.address.ensureIndex({"coordinates": "2d"}, {min: 0, max:1400000})`
+    `db.address.ensureIndex({"coordinates": "2d"}, {min: -100000, max:1400000})`
     
     
     

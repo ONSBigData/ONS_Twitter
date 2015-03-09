@@ -10,20 +10,20 @@ from ons_twitter.data_import import *
 from ons_twitter.data_formats import *
 
 start_time = datetime.now()
-mongo_address = pymongo.MongoClient("127.0.0.1:27017").twitter.address
-
-# original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
+mongo_address = pymongo.MongoClient("192.168.0.82:27017").twitter.address
+print(mongo_address.find_one())
+original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
 # create_test_csv(original_file)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
 test_twitter_mongo = pymongo.MongoClient("127.0.0.1:27017").test.tweets
 
-get_diagnostics = import_one_csv(test_file,
+get_diagnostics = import_one_csv(original_file,
                                  mongo_connection=test_twitter_mongo,
                                  mongo_address=mongo_address,
                                  debug=False,
                                  header=False,
-                                 debug_rows=1000,
+                                 debug_rows=10000,
                                  print_progress=True)
 print(get_diagnostics)
 test_file = "data/input/test.csv"
