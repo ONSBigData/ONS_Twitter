@@ -27,15 +27,9 @@ def distance_matrix(point_list, block_size=1000):
 
     # do blocks/don't do blocks
     if n < block_size:
-        # get two matrices with all possible point combinations
-        m, n = np.meshgrid(all_points, all_points)
 
-        # take the difference of their absolute values, this is the euclidean distance by definition
-        distance_array = abs(m - n)
-
-        # convert them into integers in place
-        distance_array_integer = distance_array.view('int64')
-        distance_array_integer[:] = distance_array
+        # simply calculate distance
+        distance_array_integer = euclidean_distances_matrix(all_points, all_points)
 
     else:
         # initiate empty matrix
@@ -46,16 +40,10 @@ def distance_matrix(point_list, block_size=1000):
 
         # iterate over block ids
         for row_id in range(blocks + 1):
-            # do strips of distances
-            m, n = np.meshgrid(all_points[(row_id * block_size):((row_id + 1) * block_size)],
-                               all_points)
-            distance_array = abs(m - n)
-
-            # convert to integers
-            distance_array = distance_array.astype("int32")
-
-            # attach to matrix
-            distance_array_integer[:, (row_id * block_size):((row_id + 1) * block_size)] = distance_array
+            # attach new strip to matrix
+            distance_array_integer[:, (row_id * block_size):((row_id + 1) * block_size)] =\
+                euclidean_distances_matrix(all_points[(row_id * block_size):((row_id + 1) * block_size)],
+                                           all_points)
 
     return distance_array_integer
 
@@ -128,3 +116,36 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20):
         search_these = new_search_list[:]
 
     return new_cluster, remaining_mask
+
+
+# def create_cluster_info(complete_cluster, cluster_name):
+#     """
+#     Returns more information for the cluster. Mean of distances, maximum distance, standard deviation of distances
+#     from cluster centroid.
+#
+#     :param complete_cluster: list of all points in completed cluster
+#     :return:    json formatted dictionary for mongodb insert
+#     """
+#
+#     coordinate_points =
+
+def euclidean_distances_matrix(vector1, vector2):
+    """
+    Takes two complex vectors and returns a euclidean distance matrix.
+    Input should be A[j] = x[j] + i*y[j]
+
+    :param vector1: Complex numpy vector
+    :param vector2: Complex numpy vector
+    :return:        Euclidean distance matrix
+    """
+
+    # get two matrices with all possible point combinations
+    m, n = np.meshgrid(vector1, vector2)
+
+    # take the difference of their absolute values, this is the euclidean distance by definition
+    distance_array = abs(m - n)
+
+    # convert them into integers
+    distance_array_integer = distance_array.astype('int32')
+
+    return distance_array_integer

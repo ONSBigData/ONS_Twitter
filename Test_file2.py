@@ -40,12 +40,12 @@ trial = [['A', 908190000, [373820, 805600]],
          ['G', 908190000, [8, 805600]]
          ]
 print(datetime.now() - start_time)
-trial = trial * 3000
+trial = trial * 1
 
 import numpy as np
 
 
-distance_array = cl.distance_matrix(trial, block_size=1000)
+distance_array = cl.distance_matrix(trial, block_size=10)
 
 print(distance_array)
 
