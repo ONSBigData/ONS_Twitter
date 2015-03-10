@@ -6,6 +6,9 @@ Python version: 3.4
 """
 
 import numpy as np
+from bson.son import SON
+from pymongo.errors import OperationFailure
+from ons_twitter.supporting_functions import distance as simple_distance
 
 
 def create_dictionary_for_chunk(mongo_client, chunk_id):
@@ -40,7 +43,7 @@ def create_dictionary_for_chunk(mongo_client, chunk_id):
     return tweets_by_user
 
 
-def euclidean_distances_matrix(vector1, vector2):
+def _euclidean_distances_matrix(vector1, vector2):
     """
     Takes two complex vectors and returns a euclidean distance matrix.
     Input should be A[j] = x[j] + i*y[j]
@@ -83,7 +86,7 @@ def distance_matrix(point_list, block_size=1000):
     if n < block_size:
 
         # simply calculate distance
-        distance_array_integer = euclidean_distances_matrix(all_points, all_points)
+        distance_array_integer = _euclidean_distances_matrix(all_points, all_points)
 
     else:
         # initiate empty matrix
@@ -95,9 +98,9 @@ def distance_matrix(point_list, block_size=1000):
         # iterate over block ids
         for row_id in range(blocks + 1):
             # attach new strip to matrix
-            distance_array_integer[:, (row_id * block_size):((row_id + 1) * block_size)] =\
-                euclidean_distances_matrix(all_points[(row_id * block_size):((row_id + 1) * block_size)],
-                                           all_points)
+            distance_array_integer[:, (row_id * block_size):((row_id + 1) * block_size)] = \
+                _euclidean_distances_matrix(all_points[(row_id * block_size):((row_id + 1) * block_size)],
+                                            all_points)
 
     return distance_array_integer
 
@@ -172,13 +175,66 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20):
     return new_cluster, remaining_mask
 
 
-# def create_cluster_info(complete_cluster, cluster_name):
-#     """
-#     Returns more information for the cluster. Mean of distances, maximum distance, standard deviation of distances
-#     from cluster centroid.
-#
-#     :param complete_cluster: list of all points in completed cluster
-#     :return:    json formatted dictionary for mongodb insert
-#     """
-#
-#     coordinate_points =
+def create_cluster_info(complete_cluster, cluster_name, mongo_address, min_points=3):
+    """
+    Returns more information for the cluster. Mean of distances, maximum distance, standard deviation of distances
+    from cluster centroid.
+
+    :param complete_cluster:        list of all points in completed cluster
+    :param cluster_name:            name to include in cluster_id
+    :param mongo_address:           pymongo connection to geo_indexed address base
+    :param min_points:              number of points in cluster for cluster classification
+    :return:                        json formatted dictionary for mongodb twitter["cluster"] insert
+    """
+    # convert cluster name to string in case of numeric input
+    cluster_name = str(cluster_name)
+
+    # get coordinates and mean centroid coordinates
+    coordinate_points = np.array([one_tweet[2] for one_tweet in complete_cluster])
+    cluster_centroid = np.array([one_tweet[2] for one_tweet in complete_cluster]).mean(0)
+
+    # convert to complex numbers for easier calculations
+    complex_coordinates = 1j * coordinate_points[..., 1] + coordinate_points[..., 0]
+    complex_centroid = 1j * cluster_centroid[..., 1] + cluster_centroid[..., 0]
+
+    # calculate all the distances
+    distances = _euclidean_distances_matrix(complex_coordinates, complex_centroid)
+
+    # start dictionary
+    cluster_info = {"cluster": {
+        "count": len(complete_cluster),
+        "centroid_coordinates": [int(cluster_centroid[0]),
+                                 int(cluster_centroid[1])],
+        "stats": {
+            "max_distance": round(distances.max(), 2),
+            "standard_deviation_distance": round(distances.std(), 2)
+        }
+    }}
+
+    # get cluster_type
+    if min_points <= cluster_info["cluster"]["count"]:
+        cluster_info["type"] = "cluster"
+    else:
+        cluster_info["type"] = "noise"
+
+    # find closest address
+    query = {"coordinates": SON([("$near", (float(cluster_centroid[0]), float(cluster_centroid[1]))),
+                                 ("$maxDistance", 300)])}
+    try:
+        closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[1]
+        cluster_info["address"] = closest_address_list
+        cluster_info["address"]["distance"] = round(simple_distance(closest_address_list["coordinates"],
+                                                                    cluster_centroid), 2)
+        place = closest_address_list["postcode"].replace(" ", "_")
+    except IndexError:
+        # no address has been found within 300m
+        cluster_info["address"] = "NA"
+        place = "NA"
+    except OperationFailure:
+        print("No address base available!")
+        cluster_info["address"] = "NA"
+        place = "FAILURE"
+
+    cluster_info["cluster_id"] = "%s_%s_%s" % (complete_cluster[0][1], place, cluster_name)
+
+    return cluster_info
