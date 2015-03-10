@@ -8,6 +8,60 @@ Python version: 3.4
 import numpy as np
 
 
+def create_dictionary_for_chunk(mongo_client, chunk_id):
+    """
+    Takes a mongo_db connection and a chunk_id as from the twitted mongodb database. Returns a dictionary,
+    where each key is a user_id and each value is the list of all tweets from that user.
+
+    :param mongo_client:    Active mongodb connection to twitter database
+    :param chunk_id:        Number of chunk to process. 0-999
+    :return:                Dictionary with user_id: [tweets]
+    """
+
+    # set up query
+    query = {"chunk_id": chunk_id}
+
+    # collect cursor
+    cursor = mongo_client.find(query, {"_id": 1, "user_id": 1, "tweet.coordinates": 1})
+
+    # initiate dictionary
+    tweets_by_user = {}
+    for new_tweet_mongo in cursor:
+        new_tweet = [new_tweet_mongo["_id"],
+                     new_tweet_mongo["user_id"],
+                     new_tweet_mongo["tweet"]["coordinates"]]
+
+        # insert into dictionary
+        try:
+            tweets_by_user[new_tweet_mongo["user_id"]].append(new_tweet)
+        except KeyError:
+            tweets_by_user[new_tweet_mongo["user_id"]] = [new_tweet]
+
+    return tweets_by_user
+
+
+def euclidean_distances_matrix(vector1, vector2):
+    """
+    Takes two complex vectors and returns a euclidean distance matrix.
+    Input should be A[j] = x[j] + i*y[j]
+
+    :param vector1: Complex numpy vector
+    :param vector2: Complex numpy vector
+    :return:        Euclidean distance matrix
+    """
+
+    # get two matrices with all possible point combinations
+    m, n = np.meshgrid(vector1, vector2)
+
+    # take the difference of their absolute values, this is the euclidean distance by definition
+    distance_array = abs(m - n)
+
+    # convert them into integers
+    distance_array_integer = distance_array.astype('int32')
+
+    return distance_array_integer
+
+
 def distance_matrix(point_list, block_size=1000):
     """
     For a given list of input points (Tweets) returns the distance matrix. Uses numpy arrays and complex numbers.
@@ -128,24 +182,3 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20):
 #     """
 #
 #     coordinate_points =
-
-def euclidean_distances_matrix(vector1, vector2):
-    """
-    Takes two complex vectors and returns a euclidean distance matrix.
-    Input should be A[j] = x[j] + i*y[j]
-
-    :param vector1: Complex numpy vector
-    :param vector2: Complex numpy vector
-    :return:        Euclidean distance matrix
-    """
-
-    # get two matrices with all possible point combinations
-    m, n = np.meshgrid(vector1, vector2)
-
-    # take the difference of their absolute values, this is the euclidean distance by definition
-    distance_array = abs(m - n)
-
-    # convert them into integers
-    distance_array_integer = distance_array.astype('int32')
-
-    return distance_array_integer
