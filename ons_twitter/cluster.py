@@ -201,18 +201,18 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address, min_point
     distances = _euclidean_distances_matrix(complex_coordinates, complex_centroid)
 
     # start dictionary
-    cluster_info = {"cluster": {
+    cluster_info = {
         "count": len(complete_cluster),
         "centroid_coordinates": [int(cluster_centroid[0]),
                                  int(cluster_centroid[1])],
         "stats": {
-            "max_distance": round(distances.max(), 2),
-            "standard_deviation_distance": round(distances.std(), 2)
+            "max_distance": float('%.3f' % round(distances.max(), 3)),
+            "standard_deviation_distance": float('%.3f' % round(distances.std(), 3))
         }
-    }}
+    }
 
     # get cluster_type
-    if min_points <= cluster_info["cluster"]["count"]:
+    if min_points <= cluster_info["count"]:
         cluster_info["type"] = "cluster"
     else:
         cluster_info["type"] = "noise"
@@ -223,8 +223,10 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address, min_point
     try:
         closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[1]
         cluster_info["address"] = closest_address_list
-        cluster_info["address"]["distance"] = round(simple_distance(closest_address_list["coordinates"],
-                                                                    cluster_centroid), 2)
+        cluster_info["address"]["distance"] = float('%.3f' %
+                                                    round(simple_distance(closest_address_list["coordinates"],
+                                                                          cluster_centroid), 3))
+
         place = closest_address_list["postcode"].replace(" ", "_")
     except IndexError:
         # no address has been found within 300m
@@ -238,3 +240,45 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address, min_point
     cluster_info["cluster_id"] = "%s_%s_%s" % (complete_cluster[0][1], place, cluster_name)
 
     return cluster_info
+
+
+def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20, min_points=3):
+    """
+    Cluster all the tweets of one user from a twitter dictionary.
+
+    :param user_id:         integer for twitter user_id
+    :param tweets_by_user:  a dictionary of user/list of tweets pairs. Output of create_dictionary_for_chunk
+    :param destination:     "json" or a mongodb connection if tweets to be updated there
+    :param mongo_address:   pymongo connection to an address base
+    :param eps:             distance parameter for mongodb
+    :param min_points:      minimum number of points in a valid cluster
+    :return:                updates mongodb database/json document for user, with cluster info
+    """
+
+    # grab all tweets of specific user
+    all_tweets = tweets_by_user[user_id]
+
+    # create distance matrix
+    distance_array = distance_matrix(all_tweets)
+
+    # create mask and switch
+    index = 0
+    continue_clustering = True
+    mask = [[x for x in range(len(all_tweets))],
+            np.arange(len(all_tweets), dtype="int32")]
+
+    # do clustering till set is exhausted
+    while continue_clustering:
+        new_cluster, mask = create_one_cluster(all_tweets, mask, distance_array, eps=eps)
+
+        # get info and update database if new info is found
+        if new_cluster is not None:
+            print(new_cluster)
+            new_info = create_cluster_info(new_cluster, index, mongo_address, min_points=min_points)
+            tweet_ids_to_update = [tweet[0] for tweet in all_tweets]
+            print(tweet_ids_to_update)
+            for tweet_id in tweet_ids_to_update:
+                destination.update({"_id": tweet_id}, {"$set": {"cluster": new_info}})
+            print(new_info)
+        else:
+            continue_clustering = False
