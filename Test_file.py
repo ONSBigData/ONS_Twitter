@@ -12,24 +12,28 @@ from ons_twitter.data_formats import *
 start_time = datetime.now()
 mongo_address = pymongo.MongoClient("192.168.0.82:27017").twitter.address
 
-original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
-# create_test_csv(original_file, num_rows=10000)
+# original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
+# create_test_csv(original_file, num_rows=10000, chunk_size=0)
 
-test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
+test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset0.csv"
 test_twitter_mongo = pymongo.MongoClient("192.168.0.97:30000", w=0).twitter.tweets
 
-get_diagnostics = import_one_csv(original_file,
-                                 mongo_connection=test_twitter_mongo,
-                                 mongo_address=mongo_address,
-                                 debug=False,
-                                 header=False,
-                                 debug_rows=1000,
-                                 print_progress=1000)
+import_csv("data/input/chunk_test",
+           mongo_connection=test_twitter_mongo,
+           mongo_address=mongo_address)
 
-# 1.06 minutes for 20,000 entries using csv reader
-# 34s for 10,000 entries using csv reader
-
-print(get_diagnostics)
+# get_diagnostics = import_one_csv(original_file,
+#                                  mongo_connection=test_twitter_mongo,
+#                                  mongo_address=mongo_address,
+#                                  debug=False,
+#                                  header=False,
+#                                  debug_rows=1000,
+#                                  print_progress=1000)
+#
+# # 1.06 minutes for 20,000 entries using csv reader
+# # 34s for 10,000 entries using csv reader
+#
+# print(get_diagnostics)
 
 print(datetime.now() - start_time)
 # address_base_loc = "data/input/address/address_base.csv"

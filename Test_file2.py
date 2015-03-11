@@ -11,7 +11,7 @@ import ons_twitter.cluster as cl
 start_time = datetime.now()
 import pymongo
 
-address_mongo = pymongo.MongoClient("127.0.0.1:27017").twitter.address
+address_mongo = pymongo.MongoClient("192.168.0.82:27017").twitter.address
 
 from ons_twitter.data_formats import *
 

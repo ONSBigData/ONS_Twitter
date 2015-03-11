@@ -12,16 +12,31 @@ from datetime import datetime
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 from pymongo.errors import DuplicateKeyError
-
+import numpy as np
 
 def import_csv(infile,
                mongo_connection,
-               header=False):
+               mongo_address,
+               header=False,
+               debug=False,
+               print_progress=0
+               ):
     try:
         csv_list = listdir(infile)
         one_file = False
     except NotADirectoryError:
         one_file = True
+
+    if one_file:
+        import_one_csv(infile,
+                       mongo_connection=mongo_connection,
+                       mongo_address=mongo_address,
+                       header=header,
+                       debug=debug,
+                       print_progress=print_progress)
+    else:
+        file_list = [(infile + x) for x in csv_list]
+        print(file_list)
 
 
 def import_one_csv(csv_file_name,
@@ -148,15 +163,15 @@ def import_one_csv(csv_file_name,
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
 
-    return (len(read_tweets), len(no_geo),
-            len(non_gb), len(failed_tweets),
-            len(converted_no_geo), len(no_address), len(duplicates))
+    return np.array(len(read_tweets), len(no_geo),
+                    len(non_gb), len(failed_tweets),
+                    len(converted_no_geo), len(no_address), len(duplicates))
 
 
 def create_test_csv(input_csv,
                     output_csv=None,
                     num_rows=1000,
-                    chunks=1000):
+                    chunk_size=1000):
     """
     Create a new csv file with a subset of tweets from original raw data.
     Use for debugging code.
@@ -165,12 +180,22 @@ def create_test_csv(input_csv,
     :param output_csv:  location of subset of tweets that can be used for testing. If not specified then will output
                         to same folder with "_test_subset" appended.
     :param num_rows: number of tweets in new test dataset. Default is 1000.
+    :param chunk_size: number of rows in each chunk. If not zero then will create more files in directory.
     :return: number of tweets written
     """
 
+    # check if chunks are required
+    if chunk_size == 0:
+        do_chunks = False
+        chunk_size = 1
+    else:
+        do_chunks = True
+
     # check if output is specified
     if output_csv is None:
-        output_csv = input_csv[:-4] + "_test_subset.csv"
+        output_csv = input_csv[:-4] + "_test_subset"
+
+    chunk_index = 0
 
     # open reader
     with open(input_csv, 'r') as read_input:
@@ -186,11 +211,22 @@ def create_test_csv(input_csv,
             elif index <= num_rows:
                 index += 1
                 tweets.append(row)
+
+                if (index % chunk_size == 0) and do_chunks:
+                    output_csv_name = output_csv + str(chunk_index) + ".csv"
+
+                    # start writing tweets
+                    with open(output_csv_name, 'w', newline="\n") as out_csv:
+                        out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
+                        out_tweets.writerows(tweets)
+                    chunk_index += 1
+                    tweets.clear()
             else:
                 break
 
         # start writing tweets
-        with open(output_csv, 'w', newline="\n") as out_csv:
+        output_csv_name = output_csv + str(chunk_index) + ".csv"
+        with open(output_csv_name, 'w', newline="\n") as out_csv:
             out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
             out_tweets.writerows(tweets)
 
