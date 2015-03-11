@@ -14,6 +14,7 @@ from ons_twitter.supporting_functions import *
 from pymongo.errors import DuplicateKeyError
 import numpy as np
 
+
 def import_csv(infile,
                mongo_connection,
                mongo_address,
@@ -163,9 +164,9 @@ def import_one_csv(csv_file_name,
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
 
-    return np.array(len(read_tweets), len(no_geo),
-                    len(non_gb), len(failed_tweets),
-                    len(converted_no_geo), len(no_address), len(duplicates))
+    return np.array([len(read_tweets), len(no_geo),
+                     len(non_gb), len(failed_tweets),
+                     len(converted_no_geo), len(no_address), len(duplicates)])
 
 
 def create_test_csv(input_csv,

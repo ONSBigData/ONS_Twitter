@@ -18,7 +18,7 @@ mongo_address = pymongo.MongoClient("192.168.0.82:27017").twitter.address
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset0.csv"
 test_twitter_mongo = pymongo.MongoClient("192.168.0.97:30000", w=0).twitter.tweets
 
-import_csv("data/input/chunk_test",
+import_csv(test_file,
            mongo_connection=test_twitter_mongo,
            mongo_address=mongo_address)
 
