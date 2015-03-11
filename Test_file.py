@@ -22,19 +22,6 @@ a = import_csv("data/input/chunk_test",
            mongo_connection=test_twitter_mongo,
            mongo_address=mongo_address)
 
-b = [(filename, test_twitter_mongo, mongo_address, False, False, None, 0) for filename in a]
-
-
-if __name__ == "__main__":
-    results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
-                                                          test_twitter_mongo,
-                                                          mongo_address,
-                                                          False,
-                                                          False,
-                                                          None,
-                                                          0) for filename in a)
-    print(results)
-
 
 
 # get_diagnostics = import_one_csv(original_file,

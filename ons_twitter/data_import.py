@@ -17,30 +17,53 @@ import numpy as np
 from joblib import Parallel,delayed
 
 
-def import_csv(infile,
+def import_csv(source,
                mongo_connection,
                mongo_address,
                header=False,
                debug=False,
                print_progress=0):
 
+    # check if source is a directory or file
     csv_list = []
     try:
-        csv_list = listdir(infile)
+        # grab filenames
+        csv_list = listdir(source)
         one_file = False
     except NotADirectoryError:
         one_file = True
 
+    # if source is a single file then process simply
     if one_file:
-        import_one_csv(infile,
-                       mongo_connection=mongo_connection,
-                       mongo_address=mongo_address,
-                       header=header,
-                       debug=debug,
-                       print_progress=print_progress)
+        aggregated_results = import_one_csv(source,
+                             mongo_connection=mongo_connection,
+                             mongo_address=mongo_address,
+                             header=header,
+                             debug=debug,
+                             print_progress=print_progress)
     else:
+        # process contents of folder using joblib in parallel
+
+        # generate filenames
         file_list = [(infile + "/" + x) for x in csv_list]
-        return file_list
+
+        # do parallel inserts
+        results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
+                                                      mongo_connection,
+                                                      mongo_address,
+                                                      header,
+                                                      debug,
+                                                      None,
+                                                      print_progress) for filename in file_list)
+        # aggregate statistics
+        aggregated_results = np.sum(results, axis=0)
+
+
+
+    # print stats
+    print("\n **** \nImporting finished!", datetime.now(), "\n * Imported tweets: ", )
+
+    return aggregated_results
 
 
 def import_one_csv(csv_file_name,
@@ -51,23 +74,26 @@ def import_one_csv(csv_file_name,
                    debug_rows=None,
                    print_progress=0):
     """
-    Import one csv file of tweets into a mongodb database
+    Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base
 
-    :param csv_file_name: location on csv file containing tweets
-    :param mongo_connection: mongodb pointer to database (i.e. connection.db.collection)
-    :param header: if true, then csv files contain headers and these need to be skipped
-    :param mongo_address: pointer to mongodb database with geo_indexed address base
-    :param print_progress:  integer specifying the number of reads at which diagnostics should be
-                            printed. 0 will print no diagnostics
-    :return:    tuple of number of
-                read_tweets/no_geo tweets/non_gb and failed_tweets/ converted_no_geo/ no_address / duplicates
-                successfully converted tweets (no geo -> geo),
-                prints diagnostics and inserts into database
+    :param csv_file_name:       location on csv file containing tweets
+    :param mongo_connection:    list of mongodb database parameters (ip:host, database, collection) to the twitter database
+    :param header:              if true, then csv files contain headers and these need to be skipped
+    :param mongo_address:       list of mongodb database parameters (ip:host, database, collection) to a geo_indexed
+                                mongodb address base
+    :param print_progress:      integer specifying the number of reads at which diagnostics should be
+                                printed. 0 will print no diagnostics
+    :return:                    numpy array of number of
+                                read_tweets/no_geo tweets/non_gb and failed_tweets/
+                                 converted_no_geo/ no_address / duplicates
+                                successfully converted tweets (no geo -> geo),
+                                prints diagnostics and inserts into database
     """
     # set up debug if necessary
     if debug and debug_rows is None:
         debug_rows = 5
 
+    # convert list of mongo connection parameters into mongo connections
     mongo_connection = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
     mongo_address = pymongo.MongoClient(mongo_address[0])[mongo_address[1]][mongo_address[2]]
 
