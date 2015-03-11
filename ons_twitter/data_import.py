@@ -27,7 +27,7 @@ def import_csv(source,
     # check if source is a directory or file
     csv_list = []
     try:
-        # grab filenames
+        # grab filename list
         csv_list = listdir(source)
         one_file = False
     except NotADirectoryError:
@@ -36,25 +36,25 @@ def import_csv(source,
     # if source is a single file then process simply
     if one_file:
         aggregated_results = import_one_csv(source,
-                             mongo_connection=mongo_connection,
-                             mongo_address=mongo_address,
-                             header=header,
-                             debug=debug,
-                             print_progress=print_progress)
+                                            mongo_connection=mongo_connection,
+                                            mongo_address=mongo_address,
+                                            header=header,
+                                            debug=debug,
+                                            print_progress=print_progress)
     else:
         # process contents of folder using joblib in parallel
 
-        # generate filenames
-        file_list = [(infile + "/" + x) for x in csv_list]
+        # generate filename list
+        file_list = [(source + "/" + x) for x in csv_list]
 
         # do parallel inserts
         results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
-                                                      mongo_connection,
-                                                      mongo_address,
-                                                      header,
-                                                      debug,
-                                                      None,
-                                                      print_progress) for filename in file_list)
+                                                              mongo_connection,
+                                                              mongo_address,
+                                                              header,
+                                                              debug,
+                                                              None,
+                                                              print_progress) for filename in file_list)
         # aggregate statistics
         aggregated_results = np.sum(results, axis=0)
 
@@ -64,7 +64,7 @@ def import_csv(source,
     print("\n **** \nImporting finished!", datetime.now(), "\n * Imported tweets: ", str(aggregated_results[0]),
           "\n * Non_Geo tweets: ", str(aggregated_results[1]),
           "\n * Non_GB tweets: ", str(aggregated_results[2]),
-          "\n * Failed tweets: ", str(aggreagted_results[3]),
+          "\n * Failed tweets: ", str(aggregated_results[3]),
           "\n * Converted no_geo: ", str(aggregated_results[4]),
           "\n * No address found: ", str(aggregated_results[5]),
           "\n * Duplicates: ", str(aggregated_results[6]))
