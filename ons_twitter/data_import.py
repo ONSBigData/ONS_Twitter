@@ -14,7 +14,7 @@ from ons_twitter.supporting_functions import *
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
-from joblib import Parallel,delayed
+from joblib import Parallel, delayed
 
 
 def import_csv(source,
@@ -61,8 +61,6 @@ def import_csv(source,
         # aggregate statistics
         aggregated_results = np.sum(results, axis=0)
 
-
-
     # print stats
     print("\n **** \nImporting finished!", datetime.now(), "\n * Imported tweets: ", str(aggregated_results[0]),
           "\n * Non_Geo tweets: ", str(aggregated_results[1]),
@@ -88,7 +86,8 @@ def import_one_csv(csv_file_name,
     Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base
 
     :param csv_file_name:       location on csv file containing tweets
-    :param mongo_connection:    list of mongodb database parameters (ip:host, database, collection) to the twitter database
+    :param mongo_connection:    list of mongodb database parameters (ip:host, database, collection) to
+                                the twitter database
     :param header:              if true, then csv files contain headers and these need to be skipped
     :param mongo_address:       list of mongodb database parameters (ip:host, database, collection) to a geo_indexed
                                 mongodb address base
@@ -213,15 +212,16 @@ def import_one_csv(csv_file_name,
 
 
 def create_partition_csv(input_csv,
-                         output_csv=None,
+                         output_folder=None,
                          num_rows=-1,
-                         chunk_size=10000):
+                         chunk_size=10000,
+                         header=False):
     """
     Create a new csv file with a subset of tweets from original raw data.
     Use for debugging code.
     Code will skip the first row to account for possible header row.
     :param input_csv: location of raw tweets to be inserted into mongodb
-    :param output_csv:  location of subset of tweets that can be used for testing. If not specified then will output
+    :param output_folder:  location of subset of tweets that can be used for testing. If not specified then will output
                         to same folder with "_test_subset" appended.
     :param num_rows: number of tweets in new test dataset. Default is 1000.
     :param chunk_size: number of rows in each chunk. If not zero then will create more files in directory.
@@ -242,8 +242,11 @@ def create_partition_csv(input_csv,
         do_chunks = True
 
     # check if output is specified
-    if output_csv is None:
+    if output_folder is None:
         output_csv = input_csv[:-4] + "_test_subset"
+    else:
+        create_folder(output_folder)
+        output_csv = output_folder
 
     chunk_index = 0
 
@@ -255,10 +258,10 @@ def create_partition_csv(input_csv,
         index = 0
         tweets = []
         for row in in_tweets:
-            if index == 0:
+            if index == 0 and header:
                 index += 1
                 continue
-            elif index <= num_rows or dont_stop:
+            elif index < num_rows or dont_stop:
                 index += 1
                 tweets.append(row)
 
@@ -275,10 +278,11 @@ def create_partition_csv(input_csv,
                 break
 
         # start writing tweets
-        output_csv_name = output_csv + str(chunk_index) + ".csv"
-        with open(output_csv_name, 'w', newline="\n") as out_csv:
-            out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
-            out_tweets.writerows(tweets)
+        if len(tweets) != 0:
+            output_csv_name = output_csv + str(chunk_index) + ".csv"
+            with open(output_csv_name, 'w', newline="\n") as out_csv:
+                out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
+                out_tweets.writerows(tweets)
 
     return len(tweets)
 

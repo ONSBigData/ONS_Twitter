@@ -11,18 +11,17 @@ from ons_twitter.data_formats import *
 
 
 mongo_address = ("192.168.0.82:27017", "twitter", "address")
-# original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
-# create_test_csv(original_file, num_rows=10000, chunk_size=0)
+original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
+create_partition_csv(original_file, "data/input/chunks/",  num_rows=-1, chunk_size=10000)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset0.csv"
-
-test_twitter_mongo = ("192.168.0.97:30000", "twitter", "tweets")
-
-
-if __name__ == "__main__":
-    a = import_csv("data/input/chunk_test",
-               mongo_connection=test_twitter_mongo,
-               mongo_address=mongo_address)
+#
+# test_twitter_mongo = ("192.168.0.97:30000", "twitter", "tweets")
+#
+# if __name__ == "__main__":
+#     a = import_csv("data/input/chunk_test",
+#                mongo_connection=test_twitter_mongo,
+#                mongo_address=mongo_address)
 
 
 
