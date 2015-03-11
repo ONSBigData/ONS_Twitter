@@ -30,7 +30,6 @@ get_diagnostics = import_one_csv(original_file,
 # 34s for 10,000 entries using csv reader
 
 print(get_diagnostics)
-test_file = "data/input/test.csv"
 
 print(datetime.now() - start_time)
 # address_base_loc = "data/input/address/address_base.csv"
