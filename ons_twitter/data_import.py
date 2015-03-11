@@ -24,6 +24,9 @@ def import_csv(source,
                debug=False,
                print_progress=0):
 
+    # capture start_time
+    start_time = datetime.now()
+
     # check if source is a directory or file
     csv_list = []
     try:
@@ -67,7 +70,9 @@ def import_csv(source,
           "\n * Failed tweets: ", str(aggregated_results[3]),
           "\n * Converted no_geo: ", str(aggregated_results[4]),
           "\n * No address found: ", str(aggregated_results[5]),
-          "\n * Duplicates: ", str(aggregated_results[6]))
+          "\n * Duplicates: ", str(aggregated_results[6]),
+          "\n\n Total time: ", datetime.now() - start_time,
+          "\n *****")
 
     return aggregated_results
 
@@ -207,10 +212,10 @@ def import_one_csv(csv_file_name,
                      len(converted_no_geo), len(no_address), len(duplicates)], dtype="int32")
 
 
-def create_test_csv(input_csv,
-                    output_csv=None,
-                    num_rows=1000,
-                    chunk_size=1000):
+def create_partition_csv(input_csv,
+                         output_csv=None,
+                         num_rows=-1,
+                         chunk_size=10000):
     """
     Create a new csv file with a subset of tweets from original raw data.
     Use for debugging code.
@@ -222,6 +227,12 @@ def create_test_csv(input_csv,
     :param chunk_size: number of rows in each chunk. If not zero then will create more files in directory.
     :return: number of tweets written
     """
+
+    # create switch
+    if num_rows <= 0:
+        dont_stop = True
+    else:
+        dont_stop = False
 
     # check if chunks are required
     if chunk_size == 0:
@@ -247,7 +258,7 @@ def create_test_csv(input_csv,
             if index == 0:
                 index += 1
                 continue
-            elif index <= num_rows:
+            elif index <= num_rows or dont_stop:
                 index += 1
                 tweets.append(row)
 
