@@ -13,6 +13,7 @@ from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 from pymongo.errors import DuplicateKeyError
 import numpy as np
+from joblib import Parallel,delayed
 
 
 def import_csv(infile,
@@ -20,8 +21,7 @@ def import_csv(infile,
                mongo_address,
                header=False,
                debug=False,
-               print_progress=0
-               ):
+               print_progress=0):
     try:
         csv_list = listdir(infile)
         one_file = False
@@ -37,6 +37,8 @@ def import_csv(infile,
                        print_progress=print_progress)
     else:
         file_list = [(infile + x) for x in csv_list]
+
+        results =
         print(file_list)
 
 
