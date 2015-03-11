@@ -12,6 +12,7 @@ from datetime import datetime
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 from pymongo.errors import DuplicateKeyError
+import pymongo
 import numpy as np
 from joblib import Parallel,delayed
 
@@ -42,8 +43,6 @@ def import_csv(infile,
         return file_list
 
 
-
-
 def import_one_csv(csv_file_name,
                    mongo_connection=None,
                    mongo_address=None,
@@ -68,6 +67,9 @@ def import_one_csv(csv_file_name,
     # set up debug if necessary
     if debug and debug_rows is None:
         debug_rows = 5
+
+    mongo_connection = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
+    mongo_address = pymongo.MongoClient(mongo_address[0])[mongo_address[1]][mongo_address[2]]
 
     # start reading csv file
     with open(csv_file_name, 'r') as in_tweets:
@@ -163,14 +165,14 @@ def import_one_csv(csv_file_name,
             mongo_connection.insert(tweet.dictionary)
         except DuplicateKeyError:
             duplicates.append(tweet.get_csv_format())
-            print("Duplicate!", tweet.get_info())
 
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
+    print("Finished", csv_file_name, datetime.now())
 
-    return np.array([len(read_tweets), len(no_geo),
+    return np.array([len(read_tweets) - len(duplicates), len(no_geo),
                      len(non_gb), len(failed_tweets),
-                     len(converted_no_geo), len(no_address), len(duplicates)])
+                     len(converted_no_geo), len(no_address), len(duplicates)], dtype="int32")
 
 
 def create_test_csv(input_csv,

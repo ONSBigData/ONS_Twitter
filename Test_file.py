@@ -10,28 +10,32 @@ from ons_twitter.data_import import *
 from ons_twitter.data_formats import *
 
 start_time = datetime.now()
-mongo_address = pymongo.MongoClient("192.168.0.82:27017").twitter.address
-
+mongo_address = ("192.168.0.82:27017", "twitter", "address")
 # original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
 # create_test_csv(original_file, num_rows=10000, chunk_size=0)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset0.csv"
-test_twitter_mongo = pymongo.MongoClient("192.168.0.97:30000", w=0).twitter.tweets
+
+test_twitter_mongo = ("192.168.0.97:30000", "twitter", "tweets")
 
 a = import_csv("data/input/chunk_test",
            mongo_connection=test_twitter_mongo,
            mongo_address=mongo_address)
-print(a)
+
 b = [(filename, test_twitter_mongo, mongo_address, False, False, None, 0) for filename in a]
-print(b)
+
+
 if __name__ == "__main__":
-    results = Parallel(n_jobs=2)(delayed(import_one_csv)(filename,
-                                                         test_twitter_mongo,
-                                                         mongo_address,
-                                                         False,
-                                                         False,
-                                                         None,
-                                                         0) for filename in a)
+    results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
+                                                          test_twitter_mongo,
+                                                          mongo_address,
+                                                          False,
+                                                          False,
+                                                          None,
+                                                          0) for filename in a)
+    print(results)
+
+
 
 # get_diagnostics = import_one_csv(original_file,
 #                                  mongo_connection=test_twitter_mongo,
