@@ -22,6 +22,8 @@ def import_csv(infile,
                header=False,
                debug=False,
                print_progress=0):
+
+    csv_list = []
     try:
         csv_list = listdir(infile)
         one_file = False
@@ -36,10 +38,10 @@ def import_csv(infile,
                        debug=debug,
                        print_progress=print_progress)
     else:
-        file_list = [(infile + x) for x in csv_list]
+        file_list = [(infile + "/" + x) for x in csv_list]
+        return file_list
 
-        results =
-        print(file_list)
+
 
 
 def import_one_csv(csv_file_name,

@@ -18,9 +18,20 @@ mongo_address = pymongo.MongoClient("192.168.0.82:27017").twitter.address
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset0.csv"
 test_twitter_mongo = pymongo.MongoClient("192.168.0.97:30000", w=0).twitter.tweets
 
-import_csv(test_file,
+a = import_csv("data/input/chunk_test",
            mongo_connection=test_twitter_mongo,
            mongo_address=mongo_address)
+print(a)
+b = [(filename, test_twitter_mongo, mongo_address, False, False, None, 0) for filename in a]
+print(b)
+if __name__ == "__main__":
+    results = Parallel(n_jobs=2)(delayed(import_one_csv)(filename,
+                                                         test_twitter_mongo,
+                                                         mongo_address,
+                                                         False,
+                                                         False,
+                                                         None,
+                                                         0) for filename in a)
 
 # get_diagnostics = import_one_csv(original_file,
 #                                  mongo_connection=test_twitter_mongo,
