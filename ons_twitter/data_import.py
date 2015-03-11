@@ -61,7 +61,13 @@ def import_csv(source,
 
 
     # print stats
-    print("\n **** \nImporting finished!", datetime.now(), "\n * Imported tweets: ", )
+    print("\n **** \nImporting finished!", datetime.now(), "\n * Imported tweets: ", str(aggregated_results[0]),
+          "\n * Non_Geo tweets: ", str(aggregated_results[1]),
+          "\n * Non_GB tweets: ", str(aggregated_results[2]),
+          "\n * Failed tweets: ", str(aggreagted_results[3]),
+          "\n * Converted no_geo: ", str(aggregated_results[4]),
+          "\n * No address found: ", str(aggregated_results[5]),
+          "\n * Duplicates: ", str(aggregated_results[6]))
 
     return aggregated_results
 
