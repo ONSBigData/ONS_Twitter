@@ -273,12 +273,15 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
 
         # get info and update database if new info is found
         if new_cluster is not None:
-            print(new_cluster)
+            # grab new info
             new_info = create_cluster_info(new_cluster, index, mongo_address, min_points=min_points)
+
+            # find tweet ids to update
             tweet_ids_to_update = [tweet[0] for tweet in all_tweets]
-            print(tweet_ids_to_update)
+
+            # update all tweets within the cluster
             for tweet_id in tweet_ids_to_update:
                 destination.update({"_id": tweet_id}, {"$set": {"cluster": new_info}})
-            print(new_info)
         else:
+            # terminate clustering if user tweets have been used up
             continue_clustering = False
