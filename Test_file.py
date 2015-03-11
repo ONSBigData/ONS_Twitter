@@ -13,17 +13,17 @@ start_time = datetime.now()
 mongo_address = pymongo.MongoClient("192.168.0.82:27017").twitter.address
 
 original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
-# create_test_csv(original_file)
+# create_test_csv(original_file, num_rows=10000)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset.csv"
-test_twitter_mongo = pymongo.MongoClient("127.0.0.1:27017").test.tweets
+test_twitter_mongo = pymongo.MongoClient("192.168.0.97:30000", w=0).twitter.tweets
 
 get_diagnostics = import_one_csv(original_file,
                                  mongo_connection=test_twitter_mongo,
                                  mongo_address=mongo_address,
                                  debug=False,
                                  header=False,
-                                 debug_rows=10000,
+                                 debug_rows=1000,
                                  print_progress=1000)
 
 # 1.06 minutes for 20,000 entries using csv reader

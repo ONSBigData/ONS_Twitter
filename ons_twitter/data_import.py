@@ -143,6 +143,7 @@ def import_one_csv(csv_file_name,
             mongo_connection.insert(tweet.dictionary)
         except DuplicateKeyError:
             duplicates.append(tweet.get_csv_format())
+            print("Duplicate!", tweet.get_info())
 
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
@@ -154,7 +155,8 @@ def import_one_csv(csv_file_name,
 
 def create_test_csv(input_csv,
                     output_csv=None,
-                    num_rows=1000):
+                    num_rows=1000,
+                    chunks=1000):
     """
     Create a new csv file with a subset of tweets from original raw data.
     Use for debugging code.
