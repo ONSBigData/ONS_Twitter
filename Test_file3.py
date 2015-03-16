@@ -14,7 +14,7 @@ test_tweets = ["127.0.0.1:27017", "test", "tweets"]
 mongo_address = ["192.168.0.82:27017", "twitter", "address"]
 
 if __name__ == "__main__":
-    a = cl.cluster_all(test_tweets, mongo_address, range(0, 16))
+    a = cl.cluster_all(test_tweets, mongo_address)
     print(a)
 
 

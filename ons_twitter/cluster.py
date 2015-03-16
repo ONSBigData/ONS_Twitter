@@ -291,7 +291,8 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
 
             # update all tweets within the cluster
             for tweet_id in tweet_ids_to_update:
-                destination.update({"_id": tweet_id}, {"$set": {"cluster": new_info}})
+                destination.update({"_id": tweet_id}, {"$set": {"cluster": new_info,
+                                                                "total_tweets_for_user": len(all_tweets)}})
         else:
             # terminate clustering if user tweets have been used up
             continue_clustering = False
