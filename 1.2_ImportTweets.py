@@ -5,8 +5,6 @@ Date:           11/March/2015
 Python version: 3.4
 """
 
-from datetime import datetime
-
 import ons_twitter.data_import as di
 
 
@@ -28,12 +26,12 @@ files = (harvested_tweets,
 
 
 # slice them up
-for file_name in files:
-    print("Start slicing: ", file_name, "\n", datetime.now(), "\n")
-    di.create_partition_csv(file_name,
-                            output_folder=output_folder,
-                            num_rows=-1,
-                            chunk_size=10000)
+# for file_name in files:
+# print("Start slicing: ", file_name, "\n", datetime.now(), "\n")
+#     di.create_partition_csv(file_name,
+#                             output_folder=output_folder,
+#                             num_rows=-1,
+#                             chunk_size=10000)
 
 # insert tweets
 di.import_csv(output_folder,
