@@ -228,7 +228,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     query = {"coordinates": SON([("$near", (float(cluster_centroid[0]), float(cluster_centroid[1]))),
                                  ("$maxDistance", 300)])}
     try:
-        closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[1]
+        closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[0]
         cluster_info["address"] = closest_address_list
         cluster_info["address"]["distance"] = float('%.3f' %
                                                     round(simple_distance(closest_address_list["coordinates"],
