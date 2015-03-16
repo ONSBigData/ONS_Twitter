@@ -9,19 +9,21 @@ import numpy as np
 from bson.son import SON
 from pymongo.errors import OperationFailure
 from ons_twitter.supporting_functions import distance as simple_distance
+import pymongo
 
 
-def create_dictionary_for_chunk(mongo_client, chunk_id):
+def create_dictionary_for_chunk(mongo_connection, chunk_id):
     """
     Takes a mongo_db connection and a chunk_id as from the twitted mongodb database. Returns a dictionary,
     where each key is a user_id and each value is the list of all tweets from that user.
 
-    :param mongo_client:    Active mongodb connection to twitter database
+    :param mongo_connection:    List of mongodb connection parameters to twitter database. [ip, database, collection]
     :param chunk_id:        Number of chunk to process. 0-999
     :return:                Dictionary with user_id: [tweets]
     """
 
     # set up query
+    mongo_client = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
     query = {"chunk_id": chunk_id}
 
     # collect cursor
@@ -175,19 +177,22 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20):
     return new_cluster, remaining_mask
 
 
-def create_cluster_info(complete_cluster, cluster_name, mongo_address, min_points=3):
+def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_points=3):
     """
     Returns more information for the cluster. Mean of distances, maximum distance, standard deviation of distances
     from cluster centroid.
 
     :param complete_cluster:        list of all points in completed cluster
     :param cluster_name:            name to include in cluster_id
-    :param mongo_address:           pymongo connection to geo_indexed address base
+    :param mongo_address_list:           pymongo connection to geo_indexed address base [ip, database, collection]
     :param min_points:              number of points in cluster for cluster classification
     :return:                        json formatted dictionary for mongodb twitter["cluster"] insert
     """
     # convert cluster name to string in case of numeric input
     cluster_name = str(cluster_name)
+
+    # create pymongo connection
+    mongo_address = pymongo.MongoClient(host=mongo_address_list[0], w=0)[mongo_address_list[1]][mongo_address_list[2]]
 
     # get coordinates and mean centroid coordinates
     coordinate_points = np.array([one_tweet[2] for one_tweet in complete_cluster])
@@ -261,6 +266,9 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     # create distance matrix
     distance_array = distance_matrix(all_tweets)
 
+    # establish mongo connection
+    destination = pymongo.MongoClient(destination[0], w=0)[destination[1]][destination[2]]
+
     # create mask and switch
     index = 0
     continue_clustering = True
@@ -285,3 +293,26 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
         else:
             # terminate clustering if user tweets have been used up
             continue_clustering = False
+
+
+def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
+    """
+    Cluster all the tweets for one chunk.
+
+    :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
+    :param mongo_address:       List of mongo parameters to address_base. [ip, database, collection]
+    :param chunk_id:            Chunk number.
+    :return:                    Number of users clustered.
+    """
+
+    # grab the data
+    tweets_by_user_dict = create_dictionary_for_chunk(mongo_connection, chunk_id=chunk_id)
+
+    # cluster each user
+    for user_id in tweets_by_user_dict.keys():
+        cluster_one_user(user_id=user_id,
+                         tweets_by_user=tweets_by_user_dict,
+                         destination=mongo_connection,
+                         mongo_address=mongo_address)
+
+    return len(tweets_by_user_dict.keys())
