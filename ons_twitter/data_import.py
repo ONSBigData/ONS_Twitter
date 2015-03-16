@@ -9,12 +9,14 @@ Python version: 3.4
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
-from ons_twitter.data_formats import Tweet
-from ons_twitter.supporting_functions import *
+
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
 from joblib import Parallel, delayed
+
+from ons_twitter.data_formats import Tweet
+from ons_twitter.supporting_functions import *
 
 
 def import_csv(source,
@@ -266,7 +268,7 @@ def create_partition_csv(input_csv,
                 tweets.append(row)
 
                 if (index % chunk_size == 0) and do_chunks:
-                    output_csv_name = output_csv + find_file_name(input_csv)[1][:-4] + str(chunk_index) + ".csv"
+                    output_csv_name = output_csv + find_file_name(input_csv)[1][:-4] + "_" + str(chunk_index) + ".csv"
 
                     # start writing tweets
                     with open(output_csv_name, 'w', newline="\n") as out_csv:
