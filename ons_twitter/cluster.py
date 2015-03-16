@@ -275,7 +275,7 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     index = 0
     continue_clustering = True
     mask = [[x for x in range(len(all_tweets))],
-            np.arange(len(all_tweets), dtype="int32")]
+            np.arange(len(all_tweets), dtype=np.uint32)]
 
     # do clustering till set is exhausted
     while continue_clustering:
