@@ -11,6 +11,7 @@ from pymongo.errors import OperationFailure
 from ons_twitter.supporting_functions import distance as simple_distance
 import pymongo
 from joblib import Parallel, delayed
+from datetime import datetime
 
 
 def create_dictionary_for_chunk(mongo_connection, chunk_id):
@@ -306,6 +307,8 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
     :return:                    Number of users clustered.
     """
 
+    start_time = datetime.now()
+
     # grab the data
     tweets_by_user_dict = create_dictionary_for_chunk(mongo_connection, chunk_id=chunk_id)
 
@@ -315,6 +318,8 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
                          tweets_by_user=tweets_by_user_dict,
                          destination=mongo_connection,
                          mongo_address=mongo_address)
+
+    print("Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
 
     return len(tweets_by_user_dict)
 
@@ -328,4 +333,8 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
     :return:                    Number of users clustered.
     """
 
-    # set up counter
+    all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
+                                                               mongo_address,
+                                                               index_num) for index_num in chunk_range)
+
+    return sum(all_users)

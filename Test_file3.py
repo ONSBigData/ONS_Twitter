@@ -13,8 +13,9 @@ start_time = datetime.now()
 test_tweets = ["127.0.0.1:27017", "test", "tweets"]
 mongo_address = ["192.168.0.82:27017", "twitter", "address"]
 
-a = cl.cluster_one_chunk(test_tweets, mongo_address, 31)
-print(a)
+if __name__ == "__main__":
+    a = cl.cluster_all(test_tweets, mongo_address, range(10,20))
+    print(a)
 
 
 print(datetime.now() - start_time)
