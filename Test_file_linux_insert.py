@@ -18,7 +18,7 @@ output_folder = "data/input/new_data/chunks_test/"
 
 di.create_partition_csv(april_tweets,
                         output_folder=output_folder,
-                        num_rows=1000,
+                        num_rows=10000,
                         chunk_size=100)
 
 # insert tweets
