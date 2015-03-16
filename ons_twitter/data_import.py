@@ -71,6 +71,7 @@ def import_csv(source,
           "\n * Converted no_geo: ", str(aggregated_results[4]),
           "\n * No address found: ", str(aggregated_results[5]),
           "\n * Duplicates: ", str(aggregated_results[6]),
+          "\n * Mongo Errors: ", str(aggregated_results[7]),
           "\n\n Total time: ", datetime.now() - start_time,
           "\n *****")
 
@@ -122,6 +123,7 @@ def import_one_csv(csv_file_name,
         failed_tweets = []
         non_gb = []
         no_address = []
+        mongo_error = []
 
         # iterate over each row of input csv
         for row in input_rows:
@@ -163,6 +165,10 @@ def import_one_csv(csv_file_name,
                     # if there are no address then keep track of it
                     if found_address == 1:
                         no_address.append(row)
+                    elif found_address == 2:
+                        # if there was a mongo error then do not add to database
+                        mongo_error.append(row)
+                        continue
 
                     # separate tweet into different category if columns have been moved successfully
                     if new_tweet.get_errors() == 2:
@@ -196,6 +202,9 @@ def import_one_csv(csv_file_name,
     # dump no address tweets. Will still go into pipeline!
     dump_errors(no_address, "no_address_found", csv_file_name)
 
+    # dump mongo errors, won't be in database
+    dump_errors(mongo_error, "mongo_error", csv_file_name)
+
     # put correct tweets into specified mongo_db database
     duplicates = []
     for tweet in read_tweets:
@@ -210,7 +219,7 @@ def import_one_csv(csv_file_name,
 
     return np.array([len(read_tweets) - len(duplicates), len(no_geo),
                      len(non_gb), len(failed_tweets),
-                     len(converted_no_geo), len(no_address), len(duplicates)], dtype="int32")
+                     len(converted_no_geo), len(no_address), len(duplicates), len(mongo_error)], dtype="int32")
 
 
 def create_partition_csv(input_csv,

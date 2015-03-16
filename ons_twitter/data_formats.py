@@ -181,7 +181,7 @@ class Tweet():
         """
         Finds the closest address point to the tweet from geo-indexed mongodb address base.
         :param mongo_connection: Geo-index mongodb collection.
-        :return: 1 if address is found, 0 if no address is found within 300m of tweet.
+        :return: 1 if address is found, 0 if no address is found within 300m of tweet. 2 for any other errors
         """
         # construct query
         query = {"coordinates": SON([("$near", self.dictionary["tweet"]["coordinates"]),
@@ -191,8 +191,8 @@ class Tweet():
             closest_address_list = tuple(mongo_connection.find(query, {"_id": 0}).limit(1))
         except OperationFailure:
             print("Warning! Address base unavailable!")
-            self.get_info()
             closest_address_list = []
+            return 2
 
         # check if it has found any
         if len(closest_address_list) == 0:
