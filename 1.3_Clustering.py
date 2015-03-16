@@ -18,10 +18,9 @@ mongo_address = ["192.168.0.82:27017", "twitter", "address"]
 twitter_data = ["192.168.0.97:30000", "twitter", "tweets"]
 
 # start clustering
-if __name__ == "__main__":
-    user_no = cl.cluster_all(twitter_data, mongo_address)
+user_no = cl.cluster_all(twitter_data, mongo_address)
 
-    # give info
-    print("\n  ****\nFinished clustering at: ", datetime.now(),
-          "\n in: ", datetime.now()-start_time,
-          "\n Found users:", user_no)
+# give info
+print("\n  ****\nFinished clustering at: ", datetime.now(),
+      "\n in: ", datetime.now()-start_time,
+      "\n Found users:", user_no)
