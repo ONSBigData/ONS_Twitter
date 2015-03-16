@@ -10,6 +10,7 @@ from bson.son import SON
 from pymongo.errors import OperationFailure
 from ons_twitter.supporting_functions import distance as simple_distance
 import pymongo
+from joblib import Parallel, delayed
 
 
 def create_dictionary_for_chunk(mongo_connection, chunk_id):
@@ -315,7 +316,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
                          destination=mongo_connection,
                          mongo_address=mongo_address)
 
-    return len(tweets_by_user_dict.keys())
+    return len(tweets_by_user_dict)
 
 
 def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
@@ -327,3 +328,4 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
     :return:                    Number of users clustered.
     """
 
+    # set up counter

@@ -266,7 +266,7 @@ def create_partition_csv(input_csv,
                 tweets.append(row)
 
                 if (index % chunk_size == 0) and do_chunks:
-                    output_csv_name = output_csv + str(chunk_index) + ".csv"
+                    output_csv_name = output_csv + find_file_name(input_csv)[1][:-4] + str(chunk_index) + ".csv"
 
                     # start writing tweets
                     with open(output_csv_name, 'w', newline="\n") as out_csv:
