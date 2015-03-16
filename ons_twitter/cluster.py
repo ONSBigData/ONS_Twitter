@@ -316,3 +316,14 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
                          mongo_address=mongo_address)
 
     return len(tweets_by_user_dict.keys())
+
+
+def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
+    """
+    Cluster all tweets found in collection.
+    :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
+    :param mongo_address:       List of mongo parameters to address_base. [ip, database, collection]
+    :param chunk_range:         Optional range for chunk ids to cluster.
+    :return:                    Number of users clustered.
+    """
+
