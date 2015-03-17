@@ -12,7 +12,7 @@ from ons_twitter.data_formats import *
 
 mongo_address = ("192.168.0.82:27017", "twitter", "address")
 original_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct.csv"
-create_partition_csv(original_file, "data/input/chunks/",  num_rows=-1, chunk_size=10000)
+#create_partition_csv(original_file, "data/input/chunks/",  num_rows=-1, chunk_size=10000)
 
 test_file = "C:/Users/ONS-BIG-DATA/Documents/TWITTER/twitter/data/input/Tweets_Apr_Oct_test_subset0.csv"
 #

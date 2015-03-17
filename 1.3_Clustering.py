@@ -14,8 +14,8 @@ start_time = datetime.now()
 print("Starting clustering: ", start_time, "\n")
 
 # specify databases
-mongo_address = ["192.168.0.82:27017", "twitter", "address"]
-twitter_data = ["192.168.0.97:30000", "twitter", "tweets"]
+mongo_address = ("192.168.0.82:27017", "twitter", "address")
+twitter_data = ("192.168.0.97:30000", "twitter", "tweets")
 
 # start clustering
 user_no = cl.cluster_all(twitter_data, mongo_address)
