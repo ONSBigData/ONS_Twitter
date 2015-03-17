@@ -52,14 +52,43 @@ def import_csv(source,
         # generate filename list
         file_list = [(source + "/" + x) for x in csv_list]
 
-        # do parallel inserts
-        results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
-                                                              mongo_connection,
-                                                              mongo_address,
-                                                              header,
-                                                              debug,
-                                                              None,
-                                                              print_progress) for filename in file_list)
+        # decide on parallel mongodb lookup
+        if type(mongo_address[0]) is str:
+            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
+                                                                  mongo_connection,
+                                                                  mongo_address,
+                                                                  header,
+                                                                  debug,
+                                                                  None,
+                                                                  print_progress) for filename in file_list)
+        else:
+            # verbose
+            print("\nMore than one address base were supplied!",
+                  "\nUsing all of them:\n")
+            for one_address in mongo_address:
+                print(one_address)
+
+            print("*****\n")
+
+            # create an iterable
+            dummy_mongo = mongo_address * ((len(file_list) // len(mongo_address)) + 1)
+            dummy_mongo = dummy_mongo[:len(file_list)]
+            mongo_chunk_iter = []
+
+            i = 0
+            for address_param in dummy_mongo:
+                mongo_chunk_iter.append((file_list[i], address_param))
+                i += 1
+
+            # call parallel
+            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(param[0],
+                                                                  mongo_connection,
+                                                                  param[1],
+                                                                  header,
+                                                                  debug,
+                                                                  None,
+                                                                  print_progress) for param in mongo_chunk_iter)
+
         # aggregate statistics
         aggregated_results = np.sum(results, axis=0)
 
