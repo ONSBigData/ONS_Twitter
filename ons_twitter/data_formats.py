@@ -191,7 +191,6 @@ class Tweet():
             closest_address_list = tuple(mongo_connection.find(query, {"_id": 0}).limit(1))
         except OperationFailure:
             print("Warning! Address base unavailable!")
-            closest_address_list = []
             return 2
 
         # check if it has found any
