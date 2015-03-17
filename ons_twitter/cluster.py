@@ -334,8 +334,34 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
     :return:                    Number of users clustered.
     """
 
-    all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
-                                                               mongo_address,
-                                                               index_num) for index_num in chunk_range)
+    # decide on parallel mongodb lookup
+    if type(mongo_address[0]) is str:
+        all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
+                                                                   mongo_address,
+                                                                   index_num) for index_num in chunk_range)
+    else:
+        # verbose
+        print("\nMore than one address base were supplied!",
+              "\nUsing all of them:\n")
+        for one_address in mongo_address:
+            print(one_address)
+
+        print("*****\n")
+
+        # create an iterable
+        dummy_mongo = mongo_address * ((len(chunk_range) // len(mongo_address)) + 1)
+        dummy_mongo = dummy_mongo[:len(chunk_range)]
+        mongo_chunk_iter = []
+
+        i = 0
+        for address_param in dummy_mongo:
+            mongo_chunk_iter.append((address_param, chunk_range[i]))
+            i += 1
+
+        # call parallel
+        all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
+                                                                   param_collection[0],
+                                                                   param_collection[1])
+                                        for param_collection in mongo_chunk_iter)
 
     return sum(all_users)
