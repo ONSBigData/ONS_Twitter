@@ -9,7 +9,11 @@ import ons_twitter.data_import as di
 
 
 # set up mongo variables
-mongo_address = ("192.168.0.82:27017", "twitter", "address")
+mongo_address = (("192.168.0.82:27017", "twitter", "address"),
+                 ("192.168.0.87:28000", "twitter", "address"),
+                 ("192.168.0.62:28001", "twitter", "address"),
+                 ("192.168.0.97:28002", "twitter", "address"),
+                 ("192.168.0.97:28003", "twitter", "address"))
 twitter_mongo = ("192.168.0.97:30000", "twitter", "tweets")
 
 april_tweets = "data/input/final_data/GNIP_April.csv"
