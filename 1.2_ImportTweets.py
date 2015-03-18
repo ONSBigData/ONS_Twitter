@@ -15,8 +15,6 @@ mongo_address = (("192.168.0.82:27017", "twitter", "address"),
                  ("192.168.0.97:28002", "twitter", "address"),
                  ("192.168.0.97:28003", "twitter", "address"))
 
-
-
 twitter_mongo = ("192.168.0.97:30000", "twitter", "tweets")
 
 # point to datafiles
