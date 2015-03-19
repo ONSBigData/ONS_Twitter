@@ -87,6 +87,7 @@ def import_csv(source,
 
             # create an iterable
             dummy_mongo = mongo_address * ((len(file_list) // len(mongo_address)) + 1)
+            """:type : list"""
             dummy_mongo = dummy_mongo[:len(file_list)]
             mongo_chunk_iter = []
 
