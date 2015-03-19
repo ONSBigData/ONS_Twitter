@@ -26,6 +26,21 @@ def import_csv(source,
                debug=False,
                print_progress=0):
 
+    """
+    Function imports a list of csv files containing tweets into mongodb database. For each tweet, the function finds
+    its closest address point (within 300m) and then creates a dictionary of tweet information. This information is
+    then inserted into the database.
+
+    :param source:              Folder of CSV/JSON files. (JSON not working yet.) Can be single file as well.
+    :param mongo_connection:    Targeted database.
+    :param mongo_address:       List of mongodb address base databases.
+    :param header:              Boolean indicating presence of header row.
+    :param debug:               Boolean for debugging.
+    :param print_progress:      Integer specifying intensity of verbosity. (Print at this many lines.)
+    :return:                    Aggregated results from all files imported.
+                                Imported/Non_Geo/Non_GB/Failed/converted/no address/mongo_errors
+    """
+
     # capture start_time
     start_time = datetime.now()
 
@@ -119,7 +134,7 @@ def import_one_csv(csv_file_name,
 
     :param csv_file_name:       location on csv file containing tweets
     :param mongo_connection:    list of mongodb database parameters (ip:host, database, collection) to
-                                the twitter database
+                                the twitter database. Can also be a list of mongodb databases.
     :param header:              if true, then csv files contain headers and these need to be skipped
     :param mongo_address:       list of mongodb database parameters (ip:host, database, collection) to a geo_indexed
                                 mongodb address base
