@@ -237,24 +237,29 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
         cluster_info["type"] = "noise"
 
     # find closest address
-    query = {"coordinates": SON([("$near", (float(cluster_centroid[0]), float(cluster_centroid[1]))),
-                                 ("$maxDistance", 300)])}
-    try:
-        closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[0]
-        cluster_info["address"] = closest_address_list
-        cluster_info["address"]["distance"] = float('%.3f' %
-                                                    round(simple_distance(closest_address_list["coordinates"],
-                                                                          cluster_centroid), 3))
 
-        place = closest_address_list["postcode"].replace(" ", "_")
-    except IndexError:
-        # no address has been found within 300m
-        cluster_info["address"] = "NA"
-        place = "NA"
-    except OperationFailure:
-        print("No address base available!")
-        cluster_info["address"] = "NA"
-        place = "FAILURE"
+    if cluster_info["type"] == "cluster":
+        query = {"coordinates": SON([("$near", (float(cluster_centroid[0]), float(cluster_centroid[1]))),
+                                     ("$maxDistance", 300)])}
+        try:
+            closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[0]
+            cluster_info["address"] = closest_address_list
+            cluster_info["address"]["distance"] = float('%.3f' %
+                                                        round(simple_distance(closest_address_list["coordinates"],
+                                                                              cluster_centroid), 3))
+
+            place = closest_address_list["postcode"].replace(" ", "_")
+        except IndexError:
+            # no address has been found within 300m
+            cluster_info["address"] = "NA"
+            place = "NA"
+        except OperationFailure:
+            print("No address base available!")
+            cluster_info["address"] = "NA"
+            place = "FAILURE"
+    else:
+        cluster_info["address"] = "NA_noise"
+        place = "noise"
 
     cluster_info["cluster_id"] = "%s_%s_%s" % (complete_cluster[0][1], place, cluster_name)
 
@@ -314,7 +319,7 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             continue_clustering = False
         index += 1
 
-    if user_id % 11111 == 0:
+    if user_id % 1111 == 0:
         print("user finished: ", user_id, datetime.now())
 
 
