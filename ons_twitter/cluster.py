@@ -159,7 +159,7 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20, g
         # remove searched row from mask
         remaining_mask[0].remove(search_row)
 
-        # search row
+        # search row=
         found = remaining_mask[1][distance_array[search_row, remaining_mask[1]] < eps]
 
         # search all found indices
@@ -283,13 +283,13 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     # grab all tweets of specific user
     all_tweets = tweets_by_user[user_id]
 
-    if debug and len(all_tweets) > 100:
+    if debug and len(all_tweets) > 300:
         print(user_id, len(all_tweets), datetime.now())
 
     # create distance matrix
     p1_time = datetime.now()
     distance_array = distance_matrix(all_tweets)
-    if debug and len(all_tweets) > 100:
+    if debug and len(all_tweets) > 300:
         print(" ** matrix done in ", datetime.now() - p1_time)
 
     # establish mongo connection
@@ -302,32 +302,49 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             np.arange(len(all_tweets), dtype=np.uint32)]
 
     p2_time = datetime.now()
+
+    # mongo_info holder
+    mongo_updates = []
+
     # do clustering till set is exhausted
     while continue_clustering:
+
         new_cluster, mask = create_one_cluster(all_tweets, mask, distance_array, eps=eps, graphical_debug=graph_debug)
 
         # get info and update database if new info is found
         if new_cluster is not None:
             # grab new info
+
             new_info = create_cluster_info(new_cluster, index, mongo_address, min_points=min_points)
 
             # find tweet ids to update
-            tweet_ids_to_update = [tweet[0] for tweet in all_tweets]
+            tweet_ids_to_update = [tweet[0] for tweet in new_cluster]
 
-            # update all tweets within the cluster
-            for tweet_id in tweet_ids_to_update:
-                destination.update({"_id": tweet_id}, {"$set": {"cluster": new_info,
-                                                                "total_tweets_for_user": len(all_tweets)}})
+            one_update_rule = [(tweet_id, new_info) for tweet_id in tweet_ids_to_update]
+            mongo_updates.append(one_update_rule)
+            index += 1
+
         else:
             # terminate clustering if user tweets have been used up
             continue_clustering = False
-        index += 1
 
-    if debug and len(all_tweets) > 100:
+    if debug and len(all_tweets) > 300:
+        print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
+
+    p6_time = datetime.now()
+    for cluster in mongo_updates:
+        for tweet_info in cluster:
+            destination.update({"_id": tweet_info[0]}, {"$set": {"cluster": tweet_info[1],
+                                                                 "total_tweets_for_user": len(all_tweets)}})
+    if debug and len(all_tweets) > 300:
+        print(" ** updates took: ", datetime.now() - p6_time)
+
+    if debug and len(all_tweets) > 300:
         print(" ** clustering finished in: ", datetime.now() - p2_time)
 
 
-def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1):
+def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1,
+                      graph_debug=False):
     """
     Cluster all the tweets for one chunk.
 
@@ -351,7 +368,8 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
                          tweets_by_user=tweets_by_user_dict,
                          destination=mongo_connection,
                          mongo_address=mongo_address,
-                         debug=debug)
+                         debug=debug,
+                         graph_debug=graph_debug)
 
     print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
 
@@ -372,7 +390,8 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000), parall
         if parallel:
             all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
                                                                        mongo_address,
-                                                                       index_num) for index_num in chunk_range)
+                                                                       index_num,
+                                                                       debug) for index_num in chunk_range)
 
         else:
             print("doing it in serial")
