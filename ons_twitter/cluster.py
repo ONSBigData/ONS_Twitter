@@ -151,30 +151,30 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20, g
     # duplicate search list for looping
     new_search_list = search_these[:]
 
-    # do this until cluster cannot grow any more
-    while len(new_search_list) > 0:
-        # loop through all found indices
-        for search_row in search_these:
+    # # do this until cluster cannot grow any more
+    # while len(new_search_list) > 0:
+    # loop through all found indices
+    for search_row in search_these:
 
-            # remove searched row from mask
-            remaining_mask[0].remove(search_row)
+        # remove searched row from mask
+        remaining_mask[0].remove(search_row)
 
-            # search row
-            found = remaining_mask[1][distance_array[search_row, remaining_mask[1]] < eps]
+        # search row
+        found = remaining_mask[1][distance_array[search_row, remaining_mask[1]] < eps]
 
-            # search all found indices
-            for found_index in found:
-                # add point to cluster and remove column from distance array
-                new_cluster.append(cluster_points[found_index])
-                remaining_mask[1] = np.delete(remaining_mask[1], np.where(remaining_mask[1] == found_index))
-                search_these.append(found_index)
+        # search all found indices
+        for found_index in found:
+            # add point to cluster and remove column from distance array
+            new_cluster.append(cluster_points[found_index])
+            remaining_mask[1] = np.delete(remaining_mask[1], np.where(remaining_mask[1] == found_index))
+            search_these.append(found_index)
 
-            # remove search row if hasn't been removed yet
-            try:
-                new_search_list.remove(search_row)
-            except ValueError:
-                # skip if value has already been deleted
-                continue
+            # # remove search row if hasn't been removed yet
+            # try:
+            # new_search_list.remove(search_row)
+            # except ValueError:
+            #     # skip if value has already been deleted
+            #     continue
 
         # update search_these list for while statement
         search_these = new_search_list[:]
@@ -267,7 +267,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
 
 
 def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20, min_points=3,
-                     debug=False):
+                     debug=False, graph_debug=False):
     """
     Cluster all the tweets of one user from a twitter dictionary.
 
@@ -280,14 +280,17 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     :return:                updates mongodb database/json document for user, with cluster info
     """
 
-    if debug:
-        print(user_id, len(tweets_by_user), datetime.now())
-
     # grab all tweets of specific user
     all_tweets = tweets_by_user[user_id]
 
+    if debug and len(all_tweets) > 100:
+        print(user_id, len(all_tweets), datetime.now())
+
     # create distance matrix
+    p1_time = datetime.now()
     distance_array = distance_matrix(all_tweets)
+    if debug and len(all_tweets) > 100:
+        print(" ** matrix done in ", datetime.now() - p1_time)
 
     # establish mongo connection
     destination = pymongo.MongoClient(destination[0], w=0)[destination[1]][destination[2]]
@@ -298,9 +301,10 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     mask = [[x for x in range(len(all_tweets))],
             np.arange(len(all_tweets), dtype=np.uint32)]
 
+    p2_time = datetime.now()
     # do clustering till set is exhausted
     while continue_clustering:
-        new_cluster, mask = create_one_cluster(all_tweets, mask, distance_array, eps=eps, graphical_debug=debug)
+        new_cluster, mask = create_one_cluster(all_tweets, mask, distance_array, eps=eps, graphical_debug=graph_debug)
 
         # get info and update database if new info is found
         if new_cluster is not None:
@@ -319,8 +323,8 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             continue_clustering = False
         index += 1
 
-    if user_id % 1111 == 0:
-        print("user finished: ", user_id, datetime.now())
+    if debug and len(all_tweets) > 100:
+        print(" ** clustering finished in: ", datetime.now() - p2_time)
 
 
 def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1):
@@ -354,7 +358,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     return len(tweets_by_user_dict)
 
 
-def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
+def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000), parallel=True, debug=False):
     """
     Cluster all tweets found in collection.
     :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
@@ -365,9 +369,21 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000)):
 
     # decide on parallel mongodb lookup
     if type(mongo_address[0]) is str:
-        all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
-                                                                   mongo_address,
-                                                                   index_num) for index_num in chunk_range)
+        if parallel:
+            all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
+                                                                       mongo_address,
+                                                                       index_num) for index_num in chunk_range)
+
+        else:
+            print("doing it in serial")
+            all_users = 0
+            for index_num in chunk_range:
+                all_users += cluster_one_chunk(mongo_connection,
+                                               mongo_address,
+                                               index_num,
+                                               debug)
+
+            all_users = [0, all_users]
     else:
         # verbose
         print("\nMore than one address base were supplied!",
