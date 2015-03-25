@@ -45,6 +45,7 @@ def create_dictionary_for_chunk(mongo_connection, chunk_id):
             tweets_by_user[new_tweet_mongo["user_id"]].append(new_tweet)
         except KeyError:
             tweets_by_user[new_tweet_mongo["user_id"]] = [new_tweet]
+    print("Chunk collected: ", chunk_id, datetime.now())
 
     return tweets_by_user
 
@@ -313,6 +314,9 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             continue_clustering = False
         index += 1
 
+    if user_id % 11111 == 0:
+        print("user finished: ", user_id, datetime.now())
+
 
 def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1):
     """
@@ -340,7 +344,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
                          mongo_address=mongo_address,
                          debug=debug)
 
-    print("Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
+    print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
 
     return len(tweets_by_user_dict)
 
