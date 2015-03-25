@@ -318,7 +318,7 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             new_info = create_cluster_info(new_cluster, index, mongo_address, min_points=min_points)
 
             # find tweet ids to update
-            tweet_ids_to_update = [tweet[0] for tweet in all_tweets]
+            tweet_ids_to_update = [tweet[0] for tweet in new_cluster]
 
             # update all tweets within the cluster
             # p5_time = datetime.now()
@@ -329,21 +329,21 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             #     print("updates took ", datetime.now()-p5_time, "\n")
 
             one_update_rule = [(tweet_id, new_info) for tweet_id in tweet_ids_to_update]
-
             mongo_updates.append(one_update_rule)
+            index += 1
 
         else:
             # terminate clustering if user tweets have been used up
             continue_clustering = False
-        index += 1
 
     if debug and len(all_tweets) > 300:
         print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
 
     p6_time = datetime.now()
-    for tweet_info in mongo_updates:
-        destination.update({"_id": tweet_info[0][0]}, {"$set": {"cluster": tweet_info[0][1],
-                                                                "total_tweets_for_user": len(all_tweets)}})
+    for cluster in mongo_updates:
+        for tweet_info in cluster:
+            destination.update({"_id": tweet_info[0]}, {"$set": {"cluster": tweet_info[1],
+                                                                 "total_tweets_for_user": len(all_tweets)}})
     if debug and len(all_tweets) > 300:
         print(" ** updates took: ", datetime.now() - p6_time)
 

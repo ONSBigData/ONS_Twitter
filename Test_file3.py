@@ -24,7 +24,7 @@ mongo_address = ["192.168.0.82:27017", "twitter", "address"]
 
 cl.cluster_one_chunk(test_tweets,
                      mongo_address,
-                     3,
+                     0,
                      debug=True,
                      graph_debug=False)
 #
