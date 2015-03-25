@@ -5,13 +5,15 @@ Date:           09/03/2015
 Python version: 3.4
 """
 
+from datetime import datetime
+
 import numpy as np
 from bson.son import SON
 from pymongo.errors import OperationFailure
-from ons_twitter.supporting_functions import distance as simple_distance
 import pymongo
 from joblib import Parallel, delayed
-from datetime import datetime
+
+from ons_twitter.supporting_functions import distance as simple_distance
 
 
 def create_dictionary_for_chunk(mongo_connection, chunk_id):
@@ -109,7 +111,7 @@ def distance_matrix(point_list, block_size=1000):
     return distance_array_integer
 
 
-def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20):
+def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20, graphical_debug=False):
     """
     Create one new cluster for the user and return the remaining points.
 
@@ -175,6 +177,15 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20):
 
         # update search_these list for while statement
         search_these = new_search_list[:]
+
+    if graphical_debug:
+        import matplotlib.pyplot as plt
+
+        x = [one_point[2][0] for one_point in new_cluster]
+        y = [one_point[2][1] for one_point in new_cluster]
+
+        plt.plot(x, y, 'ro')
+        plt.show()
 
     return new_cluster, remaining_mask
 
@@ -249,7 +260,8 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     return cluster_info
 
 
-def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20, min_points=3):
+def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20, min_points=3,
+                     debug=False):
     """
     Cluster all the tweets of one user from a twitter dictionary.
 
@@ -261,6 +273,9 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     :param min_points:      minimum number of points in a valid cluster
     :return:                updates mongodb database/json document for user, with cluster info
     """
+
+    if debug:
+        print(user_id, len(tweets_by_user), datetime.now())
 
     # grab all tweets of specific user
     all_tweets = tweets_by_user[user_id]
@@ -279,7 +294,7 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
 
     # do clustering till set is exhausted
     while continue_clustering:
-        new_cluster, mask = create_one_cluster(all_tweets, mask, distance_array, eps=eps)
+        new_cluster, mask = create_one_cluster(all_tweets, mask, distance_array, eps=eps, graphical_debug=debug)
 
         # get info and update database if new info is found
         if new_cluster is not None:
@@ -296,9 +311,10 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
         else:
             # terminate clustering if user tweets have been used up
             continue_clustering = False
+        index += 1
 
 
-def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
+def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1):
     """
     Cluster all the tweets for one chunk.
 
@@ -313,12 +329,16 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id):
     # grab the data
     tweets_by_user_dict = create_dictionary_for_chunk(mongo_connection, chunk_id=chunk_id)
 
+    if debug_user >= 0:
+        tweets_by_user_dict = {debug_user: tweets_by_user_dict[debug_user]}
+
     # cluster each user
     for user_id in tweets_by_user_dict.keys():
         cluster_one_user(user_id=user_id,
                          tweets_by_user=tweets_by_user_dict,
                          destination=mongo_connection,
-                         mongo_address=mongo_address)
+                         mongo_address=mongo_address,
+                         debug=debug)
 
     print("Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
 
