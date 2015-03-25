@@ -317,7 +317,7 @@ def create_partition_csv(input_csv,
             if index == 0 and header:
                 index += 1
                 continue
-            elif index < num_rows or dont_stop:
+            if index < num_rows or dont_stop:
                 index += 1
                 tweets.append(row)
 
@@ -333,12 +333,12 @@ def create_partition_csv(input_csv,
             else:
                 break
 
-        # start writing tweets
-        if len(tweets) != 0:
-            output_csv_name = output_csv + str(chunk_index) + ".csv"
-            with open(output_csv_name, 'w', newline="\n") as out_csv:
-                out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
-                out_tweets.writerows(tweets)
+    # start writing tweets
+    if len(tweets) != 0:
+        output_csv_name = output_csv + find_file_name(input_csv)[1][:-4] + "_" + str(chunk_index) + ".csv"
+        with open(output_csv_name, 'w', newline="\n") as out_csv:
+            out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
+            out_tweets.writerows(tweets)
 
     return len(tweets)
 
