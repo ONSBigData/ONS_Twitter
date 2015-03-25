@@ -320,14 +320,6 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             # find tweet ids to update
             tweet_ids_to_update = [tweet[0] for tweet in new_cluster]
 
-            # update all tweets within the cluster
-            # p5_time = datetime.now()
-            # for tweet_id in tweet_ids_to_update:
-            # destination.update({"_id": tweet_id}, {"$set": {"cluster": new_info,
-            #                                                     "total_tweets_for_user": len(all_tweets)}})
-            # if debug:
-            #     print("updates took ", datetime.now()-p5_time, "\n")
-
             one_update_rule = [(tweet_id, new_info) for tweet_id in tweet_ids_to_update]
             mongo_updates.append(one_update_rule)
             index += 1
@@ -398,7 +390,8 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000), parall
         if parallel:
             all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
                                                                        mongo_address,
-                                                                       index_num) for index_num in chunk_range)
+                                                                       index_num,
+                                                                       debug) for index_num in chunk_range)
 
         else:
             print("doing it in serial")
