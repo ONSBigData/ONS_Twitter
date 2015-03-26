@@ -17,13 +17,16 @@ print("Starting clustering: ", start_time, "\n")
 
 # specify databases
 
-mongo_address = ("192.168.0.82:27017", "twitter", "address")
+mongo_address = (("192.168.0.82:27017", "twitter", "address"),
+                 ("192.168.0.87:28000", "twitter", "address"),
+                 ("192.168.0.62:28001", "twitter", "address"),
+                 ("192.168.0.97:28002", "twitter", "address"),
+                 ("192.168.0.97:28003", "twitter", "address"))
 twitter_data = ("192.168.0.97:30000", "twitter", "tweets")
 
 # start clustering
 user_no = cl.cluster_all(twitter_data, mongo_address,
-                         debug=True,
-                         parallel=False)
+                         parallel=True)
 
 # give info
 print("\n  ****\nFinished clustering at: ", datetime.now(),

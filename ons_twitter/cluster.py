@@ -151,30 +151,30 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20, g
     # duplicate search list for looping
     new_search_list = search_these[:]
 
-    # # do this until cluster cannot grow any more
-    # while len(new_search_list) > 0:
-    # loop through all found indices
-    for search_row in search_these:
+    # do this until cluster cannot grow any more
+    while len(new_search_list) > 0:
+        # loop through all found indices
+        for search_row in search_these:
 
-        # remove searched row from mask
-        remaining_mask[0].remove(search_row)
+            # remove searched row from mask
+            remaining_mask[0].remove(search_row)
 
-        # search row=
-        found = remaining_mask[1][distance_array[search_row, remaining_mask[1]] < eps]
+            # search row=
+            found = remaining_mask[1][distance_array[search_row, remaining_mask[1]] < eps]
 
-        # search all found indices
-        for found_index in found:
-            # add point to cluster and remove column from distance array
-            new_cluster.append(cluster_points[found_index])
-            remaining_mask[1] = np.delete(remaining_mask[1], np.where(remaining_mask[1] == found_index))
-            search_these.append(found_index)
+            # search all found indices
+            for found_index in found:
+                # add point to cluster and remove column from distance array
+                new_cluster.append(cluster_points[found_index])
+                remaining_mask[1] = np.delete(remaining_mask[1], np.where(remaining_mask[1] == found_index))
+                search_these.append(found_index)
 
-            # # remove search row if hasn't been removed yet
-            # try:
-            # new_search_list.remove(search_row)
-            # except ValueError:
-            #     # skip if value has already been deleted
-            #     continue
+            # remove search row if hasn't been removed yet
+            try:
+                new_search_list.remove(search_row)
+            except ValueError:
+                # skip if value has already been deleted
+                continue
 
         # update search_these list for while statement
         search_these = new_search_list[:]
@@ -226,6 +226,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
                                  int(cluster_centroid[1])],
         "stats": {
             "max_distance": float('%.3f' % round(distances.max(), 3)),
+            "mean_distance": float('%.3f' % round(distances.mean(), 3)),
             "standard_deviation_distance": float('%.3f' % round(distances.std(), 3))
         }
     }
@@ -292,8 +293,6 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20
     distance_array = distance_matrix(all_tweets)
     if debug and len(all_tweets) > debug_threshold:
         print(" ** matrix done in ", datetime.now() - p1_time)
-
-
 
     # create mask and switch
     index = 0
@@ -378,7 +377,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     bulk_updates.execute()
 
     if debug:
-        print(" ** updates took: ", datetime.now() - p6_time)
+        print("\nUpdates took: ", datetime.now() - p6_time)
 
     print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
 

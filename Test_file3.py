@@ -26,7 +26,8 @@ cl.cluster_one_chunk(test_tweets,
                      mongo_address,
                      0,
                      debug=True,
-                     graph_debug=False)
+                     graph_debug=True,
+                     debug_user=711334000)
 #
 # tweets = pymongo.MongoClient(test_tweets[0])[test_tweets[1]][test_tweets[2]]
 # cursor = tweets.find({"chunk_id": 1, "user_id": 128639001}, {"_id": 1, "user_id": 1, "tweet.coordinates": 1})
