@@ -279,7 +279,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
 
     cluster_info["cluster_id"] = "%s_%s_%s" % (complete_cluster[0][1], place, cluster_name)
 
-    return cluster_info
+    return cluster_info, list(distances[0])
 
 
 def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20, min_points=3,
@@ -329,13 +329,17 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20
         if new_cluster is not None:
             # grab new info
 
-            new_info = create_cluster_info(new_cluster, index, mongo_address, min_points=min_points)
+            new_info, distances = create_cluster_info(new_cluster, index, mongo_address, min_points=min_points)
 
             # find tweet ids to update
             tweet_ids_to_update = [tweet[0] for tweet in new_cluster]
 
             one_update_rule = [(tweet_id, new_info) for tweet_id in tweet_ids_to_update]
+
+            one_update_rule = [(tweet_ids_to_update[i], new_info, distances[i]) for i in
+                               range(len(tweet_ids_to_update))]
             mongo_updates.append(one_update_rule)
+
             index += 1
 
         else:
@@ -348,7 +352,9 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20
     for cluster in mongo_updates:
         for tweet_info in cluster:
             all_updates.find({"_id": tweet_info[0]}).update_one({"$set": {"cluster": tweet_info[1],
-                                                                      "total_tweets_for_user": len(all_tweets)}})
+                                                                          "total_tweets_for_user": len(all_tweets),
+                                                                          "tweet.distance_from_centroid": float(
+                                                                              tweet_info[2])}})
 
     return all_updates
 
@@ -385,7 +391,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
                                         debug=debug,
                                         graph_debug=graph_debug)
 
-    print("***Starting updates ", chunk_id, "at: ", datetime.now())
+    print("***Starting updates ", chunk_id, "at: ", datetime.now(), mongo_connection)
     p6_time = datetime.now()
     bulk_updates.execute()
 
@@ -412,9 +418,10 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000),
     if parallel:
         if type(mongo_address[0]) is str:
             all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
-                                                                       mongo_address,
-                                                                       index_num,
-                                                                       debug) for index_num in chunk_range)
+                                                                              mongo_address,
+                                                                              index_num,
+                                                                              debug)
+                                                   for index_num in chunk_range)
         else:
             # verbose
             print("\nMore than one address base were supplied!",
@@ -429,15 +436,18 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000),
             dummy_mongo = dummy_mongo[:len(chunk_range)]
             mongo_chunk_iter = []
 
+            dummy_mongo_servers = mongo_connection * ((len(chunk_range) // len(mongo_connection)) + 1)
+            dummy_mongo_servers = dummy_mongo_servers[:len(chunk_range)]
+
             i = 0
             for address_param in dummy_mongo:
-                mongo_chunk_iter.append((address_param, chunk_range[i]))
+                mongo_chunk_iter.append((dummy_mongo_servers[i], address_param, chunk_range[i]))
                 i += 1
 
             # call parallel
-            all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
-                                                                              param_collection[0],
+            all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(param_collection[0],
                                                                               param_collection[1],
+                                                                              param_collection[2],
                                                                               debug)
                                                    for param_collection in mongo_chunk_iter)
     else:
@@ -447,6 +457,10 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000),
         if type(mongo_address[0]) is not str:
             mongo_address = mongo_address[0]
             print("Using only 1st address base: ", mongo_address)
+
+        if type(mongo_connection[0]) is not str:
+            mongo_connection = mongo_connection[0]
+            print("Using only 1st mongo_server: ", mongo_connection)
 
         for index_num in chunk_range:
             all_users += cluster_one_chunk(mongo_connection,
