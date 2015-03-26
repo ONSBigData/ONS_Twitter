@@ -6,10 +6,11 @@ Python version: 3.4
 """
 
 from datetime import datetime
+import time
 
 import numpy as np
 from bson.son import SON
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, ConnectionFailure
 import pymongo
 from joblib import Parallel, delayed
 
@@ -205,9 +206,6 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     # convert cluster name to string in case of numeric input
     cluster_name = str(cluster_name)
 
-    # create pymongo connection
-    mongo_address = pymongo.MongoClient(host=mongo_address_list[0], w=0)[mongo_address_list[1]][mongo_address_list[2]]
-
     # get coordinates and mean centroid coordinates
     coordinate_points = np.array([one_tweet[2] for one_tweet in complete_cluster])
     cluster_centroid = np.array([one_tweet[2] for one_tweet in complete_cluster]).mean(0)
@@ -240,6 +238,22 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     # find closest address
 
     if cluster_info["type"] == "cluster":
+        # create pymongo connection
+        try:
+            mongo_address = pymongo.MongoClient(host=mongo_address_list[0], w=0)[mongo_address_list[1]][
+                mongo_address_list[2]]
+        except ConnectionFailure:
+            for x in range(5):
+                try:
+                    print("server is busy", mongo_address_list, " retry: ", x)
+                    time.sleep(1)
+                    mongo_address = pymongo.MongoClient(host=mongo_address_list[0], w=0)[mongo_address_list[1]][
+                        mongo_address_list[2]]
+                    break
+
+                except ConnectionFailure:
+                    pass
+
         query = {"coordinates": SON([("$near", (float(cluster_centroid[0]), float(cluster_centroid[1]))),
                                      ("$maxDistance", 300)])}
         try:
@@ -258,6 +272,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
             print("No address base available!")
             cluster_info["address"] = "NA"
             place = "FAILURE"
+
     else:
         cluster_info["address"] = "NA_noise"
         place = "noise"
@@ -332,11 +347,8 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20
 
     for cluster in mongo_updates:
         for tweet_info in cluster:
-            all_updates.find({"_id": tweet_info[0]}).update({"$set": {"cluster": tweet_info[1],
+            all_updates.find({"_id": tweet_info[0]}).update_one({"$set": {"cluster": tweet_info[1],
                                                                       "total_tweets_for_user": len(all_tweets)}})
-
-    if debug and len(all_tweets) > debug_threshold:
-        print(" ** clustering finished in: ", datetime.now() - p2_time)
 
     return all_updates
 
@@ -373,6 +385,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
                                         debug=debug,
                                         graph_debug=graph_debug)
 
+    print("***Starting updates ", chunk_id, "at: ", datetime.now())
     p6_time = datetime.now()
     bulk_updates.execute()
 
@@ -395,46 +408,52 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000),
     """
 
     # decide on parallel mongodb lookup
-    if type(mongo_address[0]) is str:
-        if parallel:
+
+    if parallel:
+        if type(mongo_address[0]) is str:
             all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
                                                                        mongo_address,
                                                                        index_num,
                                                                        debug) for index_num in chunk_range)
-
         else:
-            print("doing it in serial")
-            all_users = 0
-            for index_num in chunk_range:
-                all_users += cluster_one_chunk(mongo_connection,
-                                               mongo_address,
-                                               index_num,
-                                               debug)
+            # verbose
+            print("\nMore than one address base were supplied!",
+                  "\nUsing all of them:\n")
+            for one_address in mongo_address:
+                print(one_address)
+
+            print("*****\n")
+
+            # create an iterable
+            dummy_mongo = mongo_address * ((len(chunk_range) // len(mongo_address)) + 1)
+            dummy_mongo = dummy_mongo[:len(chunk_range)]
+            mongo_chunk_iter = []
+
+            i = 0
+            for address_param in dummy_mongo:
+                mongo_chunk_iter.append((address_param, chunk_range[i]))
+                i += 1
+
+            # call parallel
+            all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
+                                                                              param_collection[0],
+                                                                              param_collection[1],
+                                                                              debug)
+                                                   for param_collection in mongo_chunk_iter)
+    else:
+        print("doing it in serial")
+        all_users = 0
+
+        if type(mongo_address[0]) is not str:
+            mongo_address = mongo_address[0]
+            print("Using only 1st address base: ", mongo_address)
+
+        for index_num in chunk_range:
+            all_users += cluster_one_chunk(mongo_connection,
+                                           mongo_address,
+                                           index_num,
+                                           debug)
 
             all_users = [0, all_users]
-    else:
-        # verbose
-        print("\nMore than one address base were supplied!",
-              "\nUsing all of them:\n")
-        for one_address in mongo_address:
-            print(one_address)
-
-        print("*****\n")
-
-        # create an iterable
-        dummy_mongo = mongo_address * ((len(chunk_range) // len(mongo_address)) + 1)
-        dummy_mongo = dummy_mongo[:len(chunk_range)]
-        mongo_chunk_iter = []
-
-        i = 0
-        for address_param in dummy_mongo:
-            mongo_chunk_iter.append((address_param, chunk_range[i]))
-            i += 1
-
-        # call parallel
-        all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
-                                                                   param_collection[0],
-                                                                   param_collection[1])
-                                        for param_collection in mongo_chunk_iter)
 
     return sum(all_users)
