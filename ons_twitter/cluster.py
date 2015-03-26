@@ -279,21 +279,22 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     :param min_points:      minimum number of points in a valid cluster
     :return:                updates mongodb database/json document for user, with cluster info
     """
+    debug_threshold = 300
 
     # grab all tweets of specific user
     all_tweets = tweets_by_user[user_id]
 
-    if debug and len(all_tweets) > 300:
+    if debug and len(all_tweets) > debug_threshold:
         print(user_id, len(all_tweets), datetime.now())
 
     # create distance matrix
     p1_time = datetime.now()
     distance_array = distance_matrix(all_tweets)
-    if debug and len(all_tweets) > 300:
+    if debug and len(all_tweets) > debug_threshold:
         print(" ** matrix done in ", datetime.now() - p1_time)
 
     # establish mongo connection
-    destination = pymongo.MongoClient(destination[0], w=0)[destination[1]][destination[2]]
+    destination = pymongo.MongoClient(destination[0], w=1)[destination[1]][destination[2]]
 
     # create mask and switch
     index = 0
@@ -328,7 +329,7 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
             # terminate clustering if user tweets have been used up
             continue_clustering = False
 
-    if debug and len(all_tweets) > 300:
+    if debug and len(all_tweets) > debug_threshold:
         print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
 
     p6_time = datetime.now()
@@ -337,12 +338,12 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
         for tweet_info in cluster:
             bulk.find({"_id": tweet_info[0]}).update({"$set": {"cluster": tweet_info[1],
                                                                  "total_tweets_for_user": len(all_tweets)}})
-    bulk.execute({"w": 0})
+    bulk.execute()
 
-    if debug and len(all_tweets) > 300:
+    if debug and len(all_tweets) > debug_threshold:
         print(" ** updates took: ", datetime.now() - p6_time)
 
-    if debug and len(all_tweets) > 300:
+    if debug and len(all_tweets) > debug_threshold:
         print(" ** clustering finished in: ", datetime.now() - p2_time)
 
 
