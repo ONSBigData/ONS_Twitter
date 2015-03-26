@@ -266,7 +266,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     return cluster_info
 
 
-def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20, min_points=3,
+def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20, min_points=3,
                      debug=False, graph_debug=False):
     """
     Cluster all the tweets of one user from a twitter dictionary.
@@ -293,8 +293,7 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     if debug and len(all_tweets) > debug_threshold:
         print(" ** matrix done in ", datetime.now() - p1_time)
 
-    # establish mongo connection
-    destination = pymongo.MongoClient(destination[0], w=1)[destination[1]][destination[2]]
+
 
     # create mask and switch
     index = 0
@@ -332,19 +331,15 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
     if debug and len(all_tweets) > debug_threshold:
         print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
 
-    p6_time = datetime.now()
-    bulk = destination.initialize_unordered_bulk_op()
     for cluster in mongo_updates:
         for tweet_info in cluster:
-            bulk.find({"_id": tweet_info[0]}).update({"$set": {"cluster": tweet_info[1],
-                                                                 "total_tweets_for_user": len(all_tweets)}})
-    bulk.execute()
-
-    if debug and len(all_tweets) > debug_threshold:
-        print(" ** updates took: ", datetime.now() - p6_time)
+            all_updates.find({"_id": tweet_info[0]}).update({"$set": {"cluster": tweet_info[1],
+                                                                      "total_tweets_for_user": len(all_tweets)}})
 
     if debug and len(all_tweets) > debug_threshold:
         print(" ** clustering finished in: ", datetime.now() - p2_time)
+
+    return all_updates
 
 
 def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1,
@@ -366,14 +361,24 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     if debug_user >= 0:
         tweets_by_user_dict = {debug_user: tweets_by_user_dict[debug_user]}
 
+    # establish mongo connection
+    destination = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
+    bulk_updates = destination.initialize_unordered_bulk_op()
+
     # cluster each user
     for user_id in tweets_by_user_dict.keys():
-        cluster_one_user(user_id=user_id,
-                         tweets_by_user=tweets_by_user_dict,
-                         destination=mongo_connection,
-                         mongo_address=mongo_address,
-                         debug=debug,
-                         graph_debug=graph_debug)
+        bulk_updates = cluster_one_user(user_id=user_id,
+                                        tweets_by_user=tweets_by_user_dict,
+                                        mongo_address=mongo_address,
+                                        all_updates=bulk_updates,
+                                        debug=debug,
+                                        graph_debug=graph_debug)
+
+    p6_time = datetime.now()
+    bulk_updates.execute()
+
+    if debug:
+        print(" ** updates took: ", datetime.now() - p6_time)
 
     print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
 
