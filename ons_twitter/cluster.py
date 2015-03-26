@@ -384,7 +384,8 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     return len(tweets_by_user_dict)
 
 
-def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000), parallel=True, debug=False):
+def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000),
+                parallel=True, debug=False, num_cores=-1):
     """
     Cluster all tweets found in collection.
     :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
@@ -396,7 +397,7 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000), parall
     # decide on parallel mongodb lookup
     if type(mongo_address[0]) is str:
         if parallel:
-            all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
+            all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
                                                                        mongo_address,
                                                                        index_num,
                                                                        debug) for index_num in chunk_range)
@@ -431,7 +432,7 @@ def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000), parall
             i += 1
 
         # call parallel
-        all_users = Parallel(n_jobs=-1)(delayed(cluster_one_chunk)(mongo_connection,
+        all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
                                                                    param_collection[0],
                                                                    param_collection[1])
                                         for param_collection in mongo_chunk_iter)
