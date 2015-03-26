@@ -332,10 +332,13 @@ def cluster_one_user(user_id, tweets_by_user, destination, mongo_address, eps=20
         print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
 
     p6_time = datetime.now()
+    bulk = destination.initialize_unordered_bulk_op()
     for cluster in mongo_updates:
         for tweet_info in cluster:
-            destination.update({"_id": tweet_info[0]}, {"$set": {"cluster": tweet_info[1],
+            bulk.find({"_id": tweet_info[0]}).update({"$set": {"cluster": tweet_info[1],
                                                                  "total_tweets_for_user": len(all_tweets)}})
+    bulk.execute({"w": 0})
+
     if debug and len(all_tweets) > 300:
         print(" ** updates took: ", datetime.now() - p6_time)
 
