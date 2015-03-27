@@ -8,8 +8,9 @@ Python version: 3.4
 import pymongo
 import random
 from datetime import datetime
+from joblib import Parallel, delayed
 
-amount = 100000
+amount = 10000000
 this_string = "GTHTHFVRDBYNFYNGUONSZRCECGHVUBDXFHGVJNFNDBVTHGVJNYXRBYXRBYTYNTHYFHVBYTFYHVTYFVHCTBHC"
 length = len(this_string)
 
@@ -22,45 +23,33 @@ for x in range(amount):
     insert_these.append({"a": new_string, "c": "test", "d": 1234343, "f": "haha"})
     update_these.append({"b": new_string[::-1]})
 
-# for x in range(3):
-#
-#     start_time = datetime.now()
-#     db = pymongo.MongoClient()["test"]["performance"]
-#     for item in insert_these:
-#         db.insert(item)
-#
-#     elapsed_time = datetime.now()-start_time
-#     print("Performance: ", amount / elapsed_time.microseconds, " inserts per microsecond")
-#     db.remove({})
-
-for x in range(3):
-    start_time = datetime.now()
-
-    db = pymongo.MongoClient()["test"]["performance"]
-    bulk = db.initialize_unordered_bulk_op()
-    for item in insert_these:
-        item["padding"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        bulk.insert(item)
-        bulk.find(item).update({"$unset": {"padding": ""}})
-
-    bulk.execute()
-    elapsed_time = datetime.now()-start_time
-    print("Insert performance: ", amount / elapsed_time.microseconds, " inserts per microsecond")
 
 
-    db.ensure_index([("a", pymongo.ASCENDING)])
 
-    update_start = datetime.now()
 
-    bulk = db.initialize_ordered_bulk_op()
-    for index in range(len(update_these)):
-        bulk.find(insert_these[index]).update({"$set": update_these[index]})
+start_time = datetime.now()
 
-    bulk.execute()
-    elapsed_time = datetime.now()- update_start
-    print("Update performance: ", amount / elapsed_time.microseconds, " updates per microsecond")
+db = pymongo.MongoClient()["test"]["performance"]
+bulk = db.initialize_unordered_bulk_op()
+for item in insert_these:
+    bulk.insert(item)
 
-    db.remove({})
+bulk.execute()
+
+print("Inserts: ", amount / (datetime.now()- start_time).microseconds)
+start_updates = datetime.now()
+
+bulk = db.initialize_unordered_bulk_op()
+for item_index in range(len(update_these)):
+    bulk.find(insert_these[item_index]).update({"$set": update_these[item_index]})
+
+bulk.execute()
+
+
+elapsed_time = datetime.now()-start_updates
+print("Update performance: ", amount / elapsed_time.microseconds)
+
+
 
 # test with 20,000 inserts
 # 0.025 inserts/microseconds with no bulking
@@ -75,3 +64,9 @@ for x in range(3):
 # one field, padded bulked: 0.16/0.3 (insert/update)
 
 # multiple fields: very varied (0.2-2.3 / 0.2-1.2)
+
+# with 3.0: 0.15-3 / 0.12-0.25
+
+# with more documents: 21.8 inserts per microseconds - wiredtiger
+
+# mongod --storageEngine=wiredTiger
