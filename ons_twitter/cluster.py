@@ -27,26 +27,56 @@ def create_dictionary_for_chunk(mongo_connection, chunk_id):
     :return:                Dictionary with user_id: [tweets]
     """
 
-    # set up query
-    mongo_client = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
-    query = {"chunk_id": chunk_id}
-
-    # collect cursor
-    cursor = mongo_client.find(query, {"_id": 1, "user_id": 1, "tweet.coordinates": 1})
-
     # initiate dictionary
     tweets_by_user = {}
-    for new_tweet_mongo in cursor:
-        new_tweet = [new_tweet_mongo["_id"],
-                     new_tweet_mongo["user_id"],
-                     new_tweet_mongo["tweet"]["coordinates"]]
 
-        # insert into dictionary
-        try:
-            tweets_by_user[new_tweet_mongo["user_id"]].append(new_tweet)
-        except KeyError:
-            tweets_by_user[new_tweet_mongo["user_id"]] = [new_tweet]
-    print("Chunk collected: ", chunk_id, datetime.now())
+    try:
+        # set up query
+        mongo_client = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
+        query = {"chunk_id": chunk_id}
+
+        # collect cursor
+        cursor = mongo_client.find(query, {"_id": 1, "user_id": 1, "tweet.coordinates": 1})
+
+        # initiate dictionary
+        tweets_by_user = {}
+        for new_tweet_mongo in cursor:
+            new_tweet = [new_tweet_mongo["_id"],
+                         new_tweet_mongo["user_id"],
+                         new_tweet_mongo["tweet"]["coordinates"]]
+
+            # insert into dictionary
+            try:
+                tweets_by_user[new_tweet_mongo["user_id"]].append(new_tweet)
+            except KeyError:
+                tweets_by_user[new_tweet_mongo["user_id"]] = [new_tweet]
+        print("Chunk collected: ", chunk_id, datetime.now())
+    except OperationFailure:
+        for x in range(5):
+            try:
+                # set up query
+                mongo_client = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
+                query = {"chunk_id": chunk_id}
+
+                # collect cursor
+                cursor = mongo_client.find(query, {"_id": 1, "user_id": 1, "tweet.coordinates": 1})
+
+                # initiate dictionary
+                tweets_by_user = {}
+                for new_tweet_mongo in cursor:
+                    new_tweet = [new_tweet_mongo["_id"],
+                                 new_tweet_mongo["user_id"],
+                                 new_tweet_mongo["tweet"]["coordinates"]]
+
+                    # insert into dictionary
+                    try:
+                        tweets_by_user[new_tweet_mongo["user_id"]].append(new_tweet)
+                    except KeyError:
+                        tweets_by_user[new_tweet_mongo["user_id"]] = [new_tweet]
+                print("Chunk collected: ", chunk_id, datetime.now())
+                break
+            except OperationFailure:
+                continue
 
     return tweets_by_user
 
@@ -282,7 +312,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     return cluster_info, list(distances[0])
 
 
-def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20, min_points=3,
+def cluster_one_user(user_id, tweets_by_user, mongo_address, eps=20, min_points=3,
                      debug=False, graph_debug=False):
     """
     Cluster all the tweets of one user from a twitter dictionary.
@@ -334,9 +364,7 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20
             # find tweet ids to update
             tweet_ids_to_update = [tweet[0] for tweet in new_cluster]
 
-            one_update_rule = [(tweet_id, new_info) for tweet_id in tweet_ids_to_update]
-
-            one_update_rule = [(tweet_ids_to_update[i], new_info, distances[i]) for i in
+            one_update_rule = [(tweet_ids_to_update[i], new_info, distances[i], len(all_tweets)) for i in
                                range(len(tweet_ids_to_update))]
             mongo_updates.append(one_update_rule)
 
@@ -349,14 +377,14 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, all_updates, eps=20
     if debug and len(all_tweets) > debug_threshold:
         print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
 
-    for cluster in mongo_updates:
-        for tweet_info in cluster:
-            all_updates.find({"_id": tweet_info[0]}).update_one({"$set": {"cluster": tweet_info[1],
-                                                                          "total_tweets_for_user": len(all_tweets),
-                                                                          "tweet.distance_from_centroid": float(
-                                                                              tweet_info[2])}})
+    # for cluster in mongo_updates:
+    # for tweet_info in cluster:
+    # all_updates.find({"_id": tweet_info[0]}).update_one({"$set": {"cluster": tweet_info[1],
+    # "total_tweets_for_user": len(all_tweets),
+    # "tweet.distance_from_centroid": float(
+    #                                                                           tweet_info[2])}})
 
-    return all_updates
+    return mongo_updates
 
 
 def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1,
@@ -378,27 +406,40 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     if debug_user >= 0:
         tweets_by_user_dict = {debug_user: tweets_by_user_dict[debug_user]}
 
-    # establish mongo connection
-    destination = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
-    bulk_updates = destination.initialize_unordered_bulk_op()
+    # # establish mongo connection
+    # destination = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
+    # bulk_updates = destination.initialize_unordered_bulk_op()
 
+    mongo_updates = []
     # cluster each user
     for user_id in tweets_by_user_dict.keys():
-        bulk_updates = cluster_one_user(user_id=user_id,
-                                        tweets_by_user=tweets_by_user_dict,
-                                        mongo_address=mongo_address,
-                                        all_updates=bulk_updates,
-                                        debug=debug,
-                                        graph_debug=graph_debug)
+        new_updates = cluster_one_user(user_id=user_id,
+                                       tweets_by_user=tweets_by_user_dict,
+                                       mongo_address=mongo_address,
+                                       debug=debug,
+                                       graph_debug=graph_debug)
+        mongo_updates.append(new_updates)
 
     print("***Starting updates ", chunk_id, "at: ", datetime.now(), mongo_connection)
     p6_time = datetime.now()
+    # bulk_updates.execute()
+    destination = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
+    bulk_updates = destination.initialize_unordered_bulk_op()
+
+    for user in mongo_updates:
+        for cluster in user:
+            for tweet_info in cluster:
+                bulk_updates.find({"_id": tweet_info[0]}).update({"$set": {"cluster": tweet_info[1],
+                                                                           "total_tweets_for_user": int(tweet_info[3]),
+                                                                           "tweet.distance_from_centroid": float(
+                                                                               tweet_info[2])}})
     bulk_updates.execute()
 
     if debug:
         print("\nUpdates took: ", datetime.now() - p6_time)
 
-    print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time)
+    print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time,
+          "  updates took: ", datetime.now() - p6_time)
 
     return len(tweets_by_user_dict)
 

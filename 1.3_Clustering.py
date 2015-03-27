@@ -28,9 +28,12 @@ twitter_data = (("192.168.0.97:30000", "twitter", "tweets"),
                 ("192.168.0.97:30031", "twitter", "tweets"),
                 ("192.168.0.97:30032", "twitter", "tweets"))
 
+twitter_data = twitter_data[0]
+mongo_address = mongo_address[0]
+
 # start clustering
-user_no = cl.cluster_all(twitter_data, mongo_address,
-                         parallel=True, num_cores=8, debug=False)
+user_no = cl.cluster_all(twitter_data, mongo_address, chunk_range=range(11, 1000),
+                         parallel=False, num_cores=1, debug=False)
 
 # give info
 print("\n  ****\nFinished clustering at: ", datetime.now(),
