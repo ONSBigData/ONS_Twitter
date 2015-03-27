@@ -53,6 +53,8 @@ def create_dictionary_for_chunk(mongo_connection, chunk_id):
         print("Chunk collected: ", chunk_id, datetime.now())
     except OperationFailure:
         for x in range(5):
+            print("Retry connection to: ", mongo_connection)
+            time.sleep(5)
             try:
                 # set up query
                 mongo_client = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
@@ -388,7 +390,7 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, eps=20, min_points=
 
 
 def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1,
-                      graph_debug=False):
+                      graph_debug=False, return_csv=False):
     """
     Cluster all the tweets for one chunk.
 
@@ -424,7 +426,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     p6_time = datetime.now()
     # bulk_updates.execute()
     destination = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
-    bulk_updates = destination.initialize_unordered_bulk_op()
+    bulk_updates = destination.initialize_ordered_bulk_op()
 
     for user in mongo_updates:
         for cluster in user:
@@ -440,6 +442,9 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
 
     print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time,
           "  updates took: ", datetime.now() - p6_time)
+
+    if return_csv:
+        return mongo_updates
 
     return len(tweets_by_user_dict)
 

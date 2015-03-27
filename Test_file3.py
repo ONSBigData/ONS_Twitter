@@ -33,7 +33,7 @@ mongo_address = mongo_address[0]
 
 cl.cluster_one_chunk(test_tweets,
                      mongo_address,
-                     0,
+                     11,
                      debug=True,
                      graph_debug=False)
 #
