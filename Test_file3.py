@@ -18,8 +18,6 @@ test_tweets = (("192.168.0.97:30000", "twitter", "tweets"),
                ("192.168.0.97:30032", "twitter", "tweets"))
 test_tweets = test_tweets[0]
 mongo_address = (("192.168.0.82:27017", "twitter", "address"),
-                 ("192.168.0.87:28000", "twitter", "address"),
-                 ("192.168.0.62:28001", "twitter", "address"),
                  ("192.168.0.97:28002", "twitter", "address"),
                  ("192.168.0.97:28003", "twitter", "address"))
 mongo_address = mongo_address[0]

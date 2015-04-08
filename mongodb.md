@@ -20,3 +20,32 @@ for( var x=0; x<; x+=6 ) {
     var prefix = String.fromCharCode(x) + String.fromCharCode(y);
     db.runCommand( { split : "twitter.tweets" , middle : { user_id : x } } );
   }
+  
+  
+# update system
+sudo apt-get update; sudo apt-get upgrade -y;
+
+
+# install mongodb
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10;
+echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list;
+sudo apt-get update;
+sudo apt-get install -y mongodb-org;
+
+# create folder for logs
+sudo mkdir /mongo_logs
+
+# connect to nas
+sudo apt-get install -y nfs-common;
+sudo mkdir -p /nas/data; sudo mount -t nfs -o rw,nfsvers=3 192.168.0.10:/volume1/DATA /nas/data;
+
+sudo nano /etc/fstab
+insert:
+	192.168.0.10:/volume1/DATA /nas/data nfs defaults 0 0
+	Ctrl+O to save and then Ctrl+X to exit
+sudo apt-get update
+
+# attach volumes
+
+cat /proc/partitions; sudo mkfs.ext4 /dev/vdb;
+sudo mount /dev/vdb /MONGO; sudo mkdir -v /MONGO/db
