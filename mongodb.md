@@ -52,6 +52,16 @@ sudo blockdev --setra 32 /dev/vdb
 sudo mkdir -pv /mongovolume
 cat /proc/partitions; sudo mkfs.ext4 /dev/vdb;
 sudo mount /dev/vdb /mongovolume;
-sudo mkdir -v /mongovolume/mongodata;
+sudo mkdir -v /mongovolume/mongodata/db;
 
+sudo chown -R mongodb:mongodb /mongovolume/mongodata;
+sudo chown -R mongodb:mongodb /mongo_logs
 
+sudo echo 'never' | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+sudo echo 'never' | sudo tee /sys/kernel/mm/transparent_hugepage/defrag
+sudo blockdev --setra 32 /dev/vdb
+
+sudo mount /dev/vdb /mongovolume;
+
+mongorestore --port 30001 --numInsertionWorkersPerCollection 4 /nas/data/Twitter\ Data/mongo_address/
+mongorestore --port 30000 --numInsertionWorkersPerCollection 8 /nas/data/Twitter\ Data/MongoTweetsApril/
