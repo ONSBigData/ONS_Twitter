@@ -45,7 +45,13 @@ insert:
 	Ctrl+O to save and then Ctrl+X to exit
 sudo apt-get update
 
-# attach volumes
+# set readahead
+sudo blockdev --setra 32 /dev/vdb
 
+# attach volumes
+sudo mkdir -pv /mongovolume
 cat /proc/partitions; sudo mkfs.ext4 /dev/vdb;
-sudo mount /dev/vdb /MONGO; sudo mkdir -v /MONGO/db
+sudo mount /dev/vdb /mongovolume;
+sudo mkdir -v /mongovolume/mongodata;
+
+
