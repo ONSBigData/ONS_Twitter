@@ -460,6 +460,8 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
                                        mongo_address=mongo_address,
                                        debug=debug,
                                        graph_debug=graph_debug)
+
+        # check for robots and if user has too many tweets then keep track of them
         if type(new_updates) == bool:
             print("* * * * * * * Robot found: ", user_id)
             with open("data/output/robots.csv", 'a', newline="\n") as outfile:
