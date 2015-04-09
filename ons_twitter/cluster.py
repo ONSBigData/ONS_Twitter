@@ -309,7 +309,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
             place = "FAILURE"
         except AutoReconnect:
             print("Address base is busy!")
-            for x in range(3):
+            for x in range(5):
                 try:
                     time.sleep(1)
                     closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[0]
@@ -321,6 +321,19 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
 
                     place = closest_address_list["postcode"].replace(" ", "_")
                     break
+
+                except IndexError:
+                    # no address has been found within 300m
+                    cluster_info["address"] = "NA"
+                    place = "NA"
+                    break
+
+                except OperationFailure:
+                    print("No address base available!")
+                    cluster_info["address"] = "NA"
+                    place = "FAILURE"
+                    break
+
                 except AutoReconnect:
                     print("Try failed:", x)
                     continue
@@ -419,6 +432,10 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     :return:                    Number of users clustered.
     """
 
+    if chunk_id <= 8:
+        print("core", chunk_id, "going to sleep for a bit...")
+        time.sleep(30 * chunk_id)
+        print("core", chunk_id, "finished sleep")
     start_time = datetime.now()
 
     # grab the data
@@ -459,7 +476,7 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     if debug:
         print("\nUpdates took: ", datetime.now() - p6_time)
 
-    print("\n\n*******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time,
+    print("  *******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time,
           "  updates took: ", datetime.now() - p6_time)
 
     if return_csv:
