@@ -10,7 +10,7 @@ import time
 
 import numpy as np
 from bson.son import SON
-from pymongo.errors import OperationFailure, ConnectionFailure
+from pymongo.errors import OperationFailure, ConnectionFailure, AutoReconnect
 import pymongo
 from joblib import Parallel, delayed
 
@@ -267,8 +267,11 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     else:
         cluster_info["type"] = "noise"
 
-    # find closest address
+    # initiate empty variables
+    place = "MISSING"
+    cluster_info["address"] = "NA"
 
+    # find closest address
     if cluster_info["type"] == "cluster":
         # create pymongo connection
         try:
@@ -304,7 +307,23 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
             print("No address base available!")
             cluster_info["address"] = "NA"
             place = "FAILURE"
+        except AutoReconnect:
+            print("Address base is busy!")
+            for x in range(3):
+                try:
+                    time.sleep(1)
+                    closest_address_list = mongo_address.find(query, {"_id": 0}).limit(1)[0]
+                    cluster_info["address"] = closest_address_list
+                    cluster_info["address"]["distance"] = float('%.3f' %
+                                                                round(
+                                                                    simple_distance(closest_address_list["coordinates"],
+                                                                                    cluster_centroid), 3))
 
+                    place = closest_address_list["postcode"].replace(" ", "_")
+                    break
+                except AutoReconnect:
+                    print("Try failed:", x)
+                    continue
     else:
         cluster_info["address"] = "NA_noise"
         place = "noise"
