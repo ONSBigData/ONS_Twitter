@@ -7,6 +7,7 @@ Python version: 3.4
 
 from datetime import datetime
 import time
+import csv
 
 import numpy as np
 from bson.son import SON
@@ -347,7 +348,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
 
 
 def cluster_one_user(user_id, tweets_by_user, mongo_address, eps=20, min_points=3,
-                     debug=False, graph_debug=False):
+                     debug=False, graph_debug=False, robot_threshold=30000):
     """
     Cluster all the tweets of one user from a twitter dictionary.
 
@@ -366,6 +367,9 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, eps=20, min_points=
 
     if debug and len(all_tweets) > debug_threshold:
         print(user_id, len(all_tweets), datetime.now())
+
+    if len(all_tweets) > robot_threshold:
+        return False
 
     # create distance matrix
     p1_time = datetime.now()
@@ -456,6 +460,15 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
                                        mongo_address=mongo_address,
                                        debug=debug,
                                        graph_debug=graph_debug)
+
+        # check for robots and if user has too many tweets then keep track of them
+        if type(new_updates) == bool:
+            print("* * * * * * * Robot found: ", user_id)
+            with open("data/output/robots.csv", 'a', newline="\n") as outfile:
+                writer = csv.writer(outfile, delimiter=",", quoting=csv.QUOTE_NONE)
+                writer.writerow([user_id, len(tweets_by_user_dict[user_id])])
+                continue
+
         mongo_updates.append(new_updates)
 
     print("***Starting updates ", chunk_id, "at: ", datetime.now(), mongo_connection)
