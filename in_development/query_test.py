@@ -42,7 +42,7 @@ print(start_time)
 start_agg = datetime.now()
 a = tweets.aggregate(
     [{"$match": {"chunk_id": {"$lt": 50}, "cluster.type": "cluster", "cluster.address.classification.abbreviated": "R"}},
-     {"$group": {"_id": "$cluster.cluster_id", "user_id": {"$min": "$user_id"}, "count": {"$sum": 1}}},
+     {"$group": {"_id": "$cluster.cluster_id", "user_id": {"$first": "$user_id"}, "count": {"$sum": 1}}},
      {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
      {"$group": {"_id": "$count", "number": {"$sum": 1}}}])
 
