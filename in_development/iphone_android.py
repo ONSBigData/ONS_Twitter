@@ -7,8 +7,12 @@ Date: 28/04/2015
 import json
 import os
 import gzip
-import pandas as pd
 from datetime import date, timedelta, datetime
+
+import pandas as pd
+
+
+folder = "/nas/data/Twitter Data/newdata/Complete Aug_Oct/"
 
 
 def read_tweets(file_path):
@@ -54,10 +58,11 @@ def count_sources(tweet_list, data_table):
         found_something = False
         data_table["total"][this_date] += 1
 
-        for search_this in data_table.columns.values[:-2]:
+        for search_this in data_table.columns.values[:-1]:
             if source.find(search_this) > 0:
                 found_something = True
                 data_table[search_this][this_date] += 1
+                break
 
         if not found_something:
             data_table["other"][this_date] += 1
@@ -67,9 +72,9 @@ def count_sources(tweet_list, data_table):
 
 my_table = create_table((2014, 8, 15), (2014, 10, 31))
 
-for file in os.listdir("data/"):
-    filename = "data/" + file
+for file in os.listdir(folder)[0:4]:
+    filename = folder + file
     tweets = read_tweets(filename)
     my_table = count_sources(tweets, my_table)
 
-print(my_table.head(20))
+my_table.to_csv("sources.csv")
