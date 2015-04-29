@@ -79,12 +79,6 @@ def parse_tweet(tweet, data_table):
         data_table["other"][this_date] += 1
 
 
-#
-# for file in os.listdir(folder)[0:1]:
-# filename = folder + file
-#     my_table = read_tweets(filename, my_table)
-
-
 file_names = sorted([(folder + fn) for fn in os.listdir(folder)])
 
 tables = Parallel(n_jobs=8)(delayed(read_tweets)(file_path) for file_path in file_names)
