@@ -72,9 +72,11 @@ def count_sources(tweet_list, data_table):
 
 my_table = create_table((2014, 8, 15), (2014, 10, 31))
 
+counter = 0
 for file in os.listdir(folder):
+    counter += 1
     filename = folder + file
-    print(filename)
+    print(counter, filename)
     tweets = read_tweets(filename)
     my_table = count_sources(tweets, my_table)
 
