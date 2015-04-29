@@ -7,68 +7,69 @@ Date: 28/04/2015
 import json
 import os
 import gzip
+import pandas as pd
+from datetime import date, timedelta, datetime
 
 
-filename = "data/" + os.listdir("data/")[0]
+def read_tweets(file_path):
+    infile = gzip.open(file_path, "r")
+    file_content = infile.readlines()
+    local_tweets = []
 
-infile = gzip.open(filename, "r")
-file_content = infile.readlines()
-tweets = []
+    for line in file_content:
+        try:
+            new_tweet = json.loads(line.decode("utf-8"))
+            if len(new_tweet) > 1:
+                local_tweets.append(new_tweet)
+        except ValueError:
+            # print("Conversion failed!", line)
+            continue
 
-for line in file_content:
-    try:
-        new_tweet = json.loads(line.decode("utf-8"))
-        if len(new_tweet) > 1:
-            tweets.append(new_tweet)
-    except ValueError:
-        # print("Conversion failed!", line)
-        continue
+    infile.close()
+    return local_tweets
 
-infile.close()
 
-for tweet in tweets[-5:-1]:
-    print(tweet)
+def create_table(start, end):
+    start_date = date(start[0], start[1], start[2])
+    end_date = date(end[0], end[1], end[2])
+    time_series = []
 
-#
-# all_percents = []
-# all_tweets = 0
-#
-# apple_users = {"iOS": 0, "iPad": 0, "iPhone": 0}
-# for fn in os.listdir("data/oct/"):
-#     tweets = []
-#
-#     filename = "data/oct/" + fn
-#     with open(filename, 'r') as infile:
-#         for row in infile:
-#             try:
-#                 len(row)
-#                 new_tweet = json.loads(row)
-#                 if len(new_tweet.keys()) > 2:
-#                     tweets.append(new_tweet)
-#             except ValueError:
-#                 continue
-#
-#     sources = []
-#
-#     for one_tweet in tweets:
-#         sources.append(one_tweet["source"])
-#
-#     all_tweets += len(tweets)
-#     search_these = ("iOS", "iPad", "iPhone")
-#     apple_set = set([])
-#
-#     for source in sources:
-#         source = str(source)
-#         for query in search_these:
-#             if source.find(query) > -1:
-#                 apple_users[query] += 1
-#                 apple_set.add(source)
-#             else:
-#                 continue
-#
-#     print(apple_users)
-#     all_percents.append(apple_users["iPhone"] / len(tweets))
-#
-# print((apple_users["iPhone"] + apple_users["iOS"] + apple_users["iPad"]) / all_tweets)
-#
-# print((apple_users["iPhone"]) / all_tweets)
+    while start_date <= end_date:
+        time_series.append(start_date)
+        start_date += timedelta(days=1)
+
+    returned_table = pd.DataFrame(0, index=time_series,
+                                  columns=("iPhone", "iPad", "iOS", "Android", "Windows Phone", "BlackBerry",
+                                           "Virtual Jukebox", "Twitter Web", "Instagram", "Tweetbot", "Mac",
+                                           "other", "total"))
+
+    return returned_table
+
+
+def count_sources(tweet_list, data_table):
+    for tweet in tweet_list:
+        this_date = datetime.strptime(tweet["created_at"], "%a %b %d %H:%M:%S %z %Y").date()
+        source = tweet["source"]
+
+        found_something = False
+        data_table["total"][this_date] += 1
+
+        for search_this in data_table.columns.values[:-2]:
+            if source.find(search_this) > 0:
+                found_something = True
+                data_table[search_this][this_date] += 1
+
+        if not found_something:
+            data_table["other"][this_date] += 1
+
+    return data_table
+
+
+my_table = create_table((2014, 8, 15), (2014, 10, 31))
+
+for file in os.listdir("data/"):
+    filename = "data/" + file
+    tweets = read_tweets(filename)
+    my_table = count_sources(tweets, my_table)
+
+print(my_table.head(20))
