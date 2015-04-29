@@ -76,7 +76,8 @@ counter = 0
 for file in os.listdir(folder):
     counter += 1
     filename = folder + file
-    print(counter, filename)
+    if counter % 100 == 1:
+        print(counter, filename, datetime.now())
     tweets = read_tweets(filename)
     my_table = count_sources(tweets, my_table)
 
