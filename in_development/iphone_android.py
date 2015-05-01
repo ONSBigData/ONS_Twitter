@@ -61,15 +61,18 @@ def create_table(start, end):
 
     return returned_table
 
+DEFAULT_SOURCES = ("iphone", "ipad", "ios", "android", "windows phone", "blackberry",
+                                           "virtual jukebox", "twitter web", "instagram", "tweetbot", "mac")
 
-def parse_tweet(tweet, data_table):
+
+def parse_tweet(tweet, data_table, look_for=DEFAULT_SOURCES):
     this_date = datetime.strptime(tweet["created_at"], "%a %b %d %H:%M:%S %z %Y").date()
-    source = tweet["source"]
+    source = tweet["source"].lower()
 
     found_something = False
     data_table["total"][this_date] += 1
 
-    for search_this in data_table.columns.values[:-2]:
+    for search_this in look_for:
         if source.find(search_this) > 0:
             found_something = True
             data_table[search_this][this_date] += 1
