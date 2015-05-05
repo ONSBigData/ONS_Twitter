@@ -94,7 +94,7 @@ for table in tables[1:]:
 my_table.to_csv("sources_demo.csv")
 
 # plot the whole data
-my_data = pd.read_csv("/VOLUME/twitter/in_development/sources.csv", index_col=0, parse_dates=True)
+my_data = pd.read_csv("/VOLUME/twitter/in_development/sources_old_AUG_OCT.csv", index_col=0, parse_dates=True)
 pyplot.interactive(False)
 my_data.plot()
 pyplot.show()

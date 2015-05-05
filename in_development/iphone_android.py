@@ -14,8 +14,7 @@ from joblib import Parallel, delayed
 import pandas as pd
 
 
-# folder = "/nas/data/Twitter Data/newdata/Complete Aug_Oct/"
-folder = "data/"
+folder = "/nas/data/Twitter Data/newdata/Complete Aug_Oct/"
 
 
 def read_tweets(file_path):
