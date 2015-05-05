@@ -14,7 +14,8 @@ from joblib import Parallel, delayed
 import pandas as pd
 
 
-folder = "/nas/data/Twitter Data/newdata/Complete Aug_Oct/"
+# folder = "/nas/data/Twitter Data/newdata/Complete Aug_Oct/"
+folder = "data/"
 
 
 def read_tweets(file_path):
@@ -55,24 +56,21 @@ def create_table(start, end):
         start_date += timedelta(days=1)
 
     returned_table = pd.DataFrame(0, index=time_series,
-                                  columns=("iPhone", "iPad", "iOS", "Android", "Windows Phone", "BlackBerry",
-                                           "Virtual Jukebox", "Twitter Web", "Instagram", "Tweetbot", "Mac",
+                                  columns=("iphone", "ipad", "ios", "android", "windows phone", "blackberry",
+                                           "virtual jukebox", "twitter web", "instagram", "tweetbot", "mac",
                                            "other", "total"))
 
     return returned_table
 
-DEFAULT_SOURCES = ("iphone", "ipad", "ios", "android", "windows phone", "blackberry",
-                                           "virtual jukebox", "twitter web", "instagram", "tweetbot", "mac")
 
-
-def parse_tweet(tweet, data_table, look_for=DEFAULT_SOURCES):
+def parse_tweet(tweet, data_table):
     this_date = datetime.strptime(tweet["created_at"], "%a %b %d %H:%M:%S %z %Y").date()
     source = tweet["source"].lower()
 
     found_something = False
     data_table["total"][this_date] += 1
 
-    for search_this in look_for:
+    for search_this in data_table.columns.values[:-2]:
         if source.find(search_this) > 0:
             found_something = True
             data_table[search_this][this_date] += 1
