@@ -13,7 +13,7 @@ import pandas as pd
 
 tweets = pymongo.MongoClient("192.168.0.99:30000")["twitter"]["tweets"]
 
-for chunk_id in range(5):
+for chunk_id in range(1000):
     print(chunk_id, datetime.now())
     counts = tweets.aggregate([{"$match": {"chunk_id": chunk_id}},
                                {"$group": {"_id": "$time.date", "count": {"$sum": 1}}}])
