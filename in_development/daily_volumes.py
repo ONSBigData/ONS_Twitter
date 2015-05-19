@@ -27,4 +27,3 @@ for chunk_id in range(1000):
 
 
 all_counts.sort_index().to_csv("daily_volumes.csv", index=True)
-
