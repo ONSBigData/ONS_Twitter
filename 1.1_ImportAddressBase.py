@@ -12,7 +12,7 @@ from ons_twitter.data_import import insert_json_mongo
 address_base_csv_location = "data/input/address/address_base.csv"
 address_json_folder = "data/output/address/"
 
-mongo_ip = "192.168.0.82:27017"
+mongo_ip = "192.168.0.98:30001"
 database_name = "twitter"
 collection_name = "address"
 
