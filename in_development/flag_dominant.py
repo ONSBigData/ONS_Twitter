@@ -6,9 +6,11 @@ Date: 02/06/2015
 Python version: 3.4
 """
 
-import pymongo
 from datetime import datetime
+
+import pymongo
 from joblib import Parallel,delayed
+
 
 # establish mongo connection
 db = pymongo.MongoClient("192.168.0.99:30000")["twitter"]["tweets"]
@@ -21,7 +23,7 @@ def find_and_update_dominant_clusters(chunk_id):
                                            "cluster.address": {"$ne": "NA"},
                                            "cluster.address.classification.abbreviated": "R"}},
                                {"$group": {"_id": "$user_id", "cluster_count": {"$max": "$cluster.count"}
-                                           }}])["result"]
+                                           }}])
 
     by_cluster_list = list(by_cluster)
 
