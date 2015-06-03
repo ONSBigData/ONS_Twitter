@@ -7,9 +7,11 @@ Date:   03/06/2015
 Python version: 3.4
 """
 
+from datetime import datetime
+
 import pymongo
 import pandas as pd
-from datetime import datetime
+
 
 
 # establish pymongo connection
@@ -29,15 +31,19 @@ for chunk_id in range(1000):
 
     df = list(df)
 
+    # unpack list of languages into a string
     for a in df:
         a["languages"].sort()
         a["languages"] = "_".join(a["languages"])
 
-    dataset = pd.DataFrame(df)
+    # create data frame
+    data_set = pd.DataFrame(df)
 
-    grouped = dataset.groupby(by=["oslaua", "languages"])
+    # aggregate by local authority and languages
+    grouped = data_set.groupby(by=["oslaua", "languages"])
     agg_df = grouped.count()
 
+    # append to final data frame
     if chunk_id == 0:
         all_counts = agg_df
     else:
