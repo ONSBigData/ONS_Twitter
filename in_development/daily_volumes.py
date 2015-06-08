@@ -6,7 +6,6 @@ Python version: 3.4
 """
 
 from datetime import datetime
-
 import pymongo
 import pandas as pd
 

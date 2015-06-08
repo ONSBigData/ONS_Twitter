@@ -7,6 +7,8 @@ Python version: 3.4
 
 import csv
 import pymongo
+from datetime import datetime
+from joblib import delayed, Parallel
 
 # point to files, with user_ids for robots
 recent_robots = "../data/output/robots.csv"
@@ -65,7 +67,7 @@ def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
     assert type(to_data_base) == pymongo.collection.Collection
 
     # show user_id to be moved
-    print(user_id)
+    print("%20.d  time: %s" % (user_id, datetime.now()))
 
     # query database and set up bulk insert
     cursor = from_data_base.find({"chunk_id": user_id % 1000, "user_id": user_id})
@@ -79,26 +81,23 @@ def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
     for tweet in cursor:
         counter += 1
         unique_ids.append(tweet["_id"])
-        bulk.insert(tweet)
+        # bulk.insert(tweet)
 
     # move tweets
-    bulk.execute()
+    # bulk.execute()
     del cursor, bulk
 
     # now removed all tweets that were moved over to new database
-    bulk_remove = from_data_base.initialize_unordered_bulk_op()
-    for one_id in unique_ids:
-        bulk_remove.find({"_id": one_id}).remove()
-
-    # execute operation
-    bulk_remove.execute()
-    del bulk_remove
+    # bulk_remove = from_data_base.initialize_unordered_bulk_op()
+    # for one_id in unique_ids:
+    #     bulk_remove.find({"_id": one_id}).remove()
+    #
+    # # execute operation
+    # bulk_remove.execute()
+    # del bulk_remove
 
     return counter
 
-total_moved = 0
-for one_user in robot_list:
-    total_moved += move_one_user(one_user)
+total_moved_list = Parallel(n_jobs=-1)(delayed(move_one_user)(one_user_id) for one_user_id in robot_list[1:8])
 
-
-print(total_moved)
+print(total_moved_list.sum())
