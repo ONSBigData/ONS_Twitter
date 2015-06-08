@@ -6,9 +6,11 @@ Python version: 3.4
 """
 
 import csv
-import pymongo
 from datetime import datetime
+
+import pymongo
 from joblib import delayed, Parallel
+
 
 # point to files, with user_ids for robots
 recent_robots = "../special_csv/robots.csv"
@@ -46,8 +48,7 @@ assert len(robot_list) == 242
 # sort the set into a list
 robot_list = sorted(robot_list, key=lambda one_id: one_id % 1000)
 
-
-test_id = robot_list[0]
+# specify databases
 db = ("192.168.0.99:30000", "twitter", "tweets")
 db_robots = ("192.168.0.99:30000", "twitter", "robots")
 
@@ -70,37 +71,50 @@ def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
     assert from_data_base != to_data_base, "Source and destination database must be distinct"
 
     # show user_id to be moved
-    print("%20.d  time: %s" % (user_id, datetime.now()))
+    start_time = datetime.now()
+    print("%20.d  time: %s" % (user_id, start_time))
+
+    mongo_from = pymongo.MongoClient(from_data_base[0])[from_data_base[1]][from_data_base[2]]
+    mongo_to = pymongo.MongoClient(to_data_base[0])[to_data_base[1]][to_data_base[2]]
 
     # query database and set up bulk insert
-    cursor = from_data_base.find({"chunk_id": user_id % 1000, "user_id": user_id})
-    bulk = to_data_base.initialize_unordered_bulk_op()
+    cursor = mongo_from.find({"chunk_id": user_id % 1000, "user_id": user_id})
+    cursor_list = list(cursor)
+
+    # if cursor is empty skip user
+    if len(cursor_list) == 0:
+        print("No tweets for user %20.d, skipping user!" % user_id)
+        return 0
+
+    bulk = mongo_to.initialize_unordered_bulk_op()
 
     # initialise list to record unique _id values
     unique_ids = []
 
     # iterate over cursor
     counter = 0
-    for tweet in cursor:
+    for tweet in cursor_list:
         counter += 1
         unique_ids.append(tweet["_id"])
-        # bulk.insert(tweet)
+        bulk.insert(tweet)
 
     # move tweets
-    # bulk.execute()
-    del cursor, bulk
+    bulk.execute()
 
     # now removed all tweets that were moved over to new database
-    # bulk_remove = from_data_base.initialize_unordered_bulk_op()
-    # for one_id in unique_ids:
-    #     bulk_remove.find({"_id": one_id}).remove()
-    #
+    bulk_remove = mongo_from.initialize_unordered_bulk_op()
+    for one_id in unique_ids:
+        bulk_remove.find({"_id": one_id}).remove()
+
     # # execute operation
-    # bulk_remove.execute()
-    # del bulk_remove
+    bulk_remove.execute()
+    del bulk_remove
+
+    print("*** %20.d finished in: %s" % (user_id, datetime.now() - start_time))
 
     return counter
 
-total_moved_list = Parallel(n_jobs=-1)(delayed(move_one_user)(one_user_id) for one_user_id in robot_list[1:8])
+
+total_moved_list = Parallel(n_jobs=-1)(delayed(move_one_user)(one_user_id) for one_user_id in robot_list)
 
 print(total_moved_list.sum())
