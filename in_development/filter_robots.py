@@ -44,12 +44,12 @@ read_one_file(found_robots, 1)
 assert len(robot_list) == 242
 
 # sort the set into a list
-robot_list = sorted(robot_list)
+robot_list = sorted(robot_list, key=lambda one_id: one_id % 1000)
 
 
 test_id = robot_list[0]
-db = pymongo.MongoClient("192.168.0.99:30000")["twitter"]["tweets"]
-db_robots = pymongo.MongoClient("192.168.0.99:30000")["twitter"]["robots"]
+db = ("192.168.0.99:30000", "twitter", "tweets")
+db_robots = ("192.168.0.99:30000", "twitter", "robots")
 
 
 def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
@@ -62,9 +62,12 @@ def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
     """
 
     # assert input types
-    assert type(user_id) == int
-    assert type(from_data_base) == pymongo.collection.Collection
-    assert type(to_data_base) == pymongo.collection.Collection
+    assert type(user_id) is int, "User_id must be an integer!"
+    assert type(from_data_base) is tuple and len(from_data_base) == 3, "from_data_base must be a tuple of form" \
+                                                                       "(ip:host, database, collection)"
+    assert type(to_data_base) is tuple and len(to_data_base) == 3, "to_data_base must be a tuple of form" \
+                                                                   "(ip:host, database, collection)"
+    assert from_data_base != to_data_base, "Source and destination database must be distinct"
 
     # show user_id to be moved
     print("%20.d  time: %s" % (user_id, datetime.now()))
