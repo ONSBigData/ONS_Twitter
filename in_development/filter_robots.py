@@ -11,9 +11,9 @@ from datetime import datetime
 from joblib import delayed, Parallel
 
 # point to files, with user_ids for robots
-recent_robots = "../data/output/robots.csv"
-manual_robots = "../data/output/manual_robots.csv"
-found_robots = "../data/output/found_robots_1000.csv"
+recent_robots = "../special_csv/robots.csv"
+manual_robots = "../special_csv/manual_robots.csv"
+found_robots = "../special_csv/found_robots_1000.csv"
 
 # initialise empty set
 robot_list = set([])
