@@ -29,7 +29,7 @@ def find_and_update_dominant_clusters(chunk_id):
     bulk = db.initialize_unordered_bulk_op()
 
     # search for these dominant clusters to retrieve whole documents
-    for dominant_cluster in by_cluster_list[1:50]:
+    for dominant_cluster in by_cluster_list:
         bulk.find({"chunk_id": chunk_id,
                    "user_id": dominant_cluster["_id"],
                    "cluster.address.classification.abbreviated": "R",
