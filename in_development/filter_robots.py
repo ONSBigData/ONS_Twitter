@@ -8,8 +8,11 @@ Python version: 3.4
 import csv
 from datetime import datetime
 
+import numpy as np
+
 import pymongo
 from joblib import delayed, Parallel
+
 
 
 # point to files, with user_ids for robots
@@ -117,4 +120,4 @@ def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
 
 total_moved_list = Parallel(n_jobs=-1)(delayed(move_one_user)(one_user_id) for one_user_id in robot_list)
 
-print(total_moved_list.sum())
+print(np.array(total_moved_list).sum())
