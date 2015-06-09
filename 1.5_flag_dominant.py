@@ -7,7 +7,6 @@ Python version: 3.4
 """
 
 from datetime import datetime
-
 import pymongo
 from joblib import Parallel,delayed
 
