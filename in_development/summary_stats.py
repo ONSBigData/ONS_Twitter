@@ -16,7 +16,7 @@ def get_counts(chunk_id, database=("192.168.0.99:30000", "twitter", "tweets")):
     Grab aggregate cluster address statistics from the specified database per chunk.
     :param chunk_id: (int) chunk_id index in database
     :param database: (3-tuple) mongodb database parameters
-    :return: pandas dataframe with 2 columns, _id: address class and
+    :return: pandas data frame with 2 columns, _id: address class and
              count_by_group: number of clusters with such address
     """
 
@@ -56,5 +56,3 @@ for index_num in range(1, len(results)):
 # write final df to csv
 print("Finished process at %s" % datetime.now())
 new_df.to_csv("summary.csv")
-
-
