@@ -5,12 +5,15 @@ Date:           09/06/2015
 Python version: 3.4
 """
 
+from datetime import datetime
+
 import pymongo
 import pandas as pd
 from joblib import Parallel, delayed
 
+
 def get_counts(chunk_id, database=("192.168.0.99:30000", "twitter", "tweets")):
-    print("Starting chunk_id %3.d" % chunk_id)
+    print("Starting chunk_id %3.d, at: %s" % (chunk_id, datetime.now()))
     db = pymongo.MongoClient(database[0])[database[1]][database[2]]
 
     result = db.aggregate([{"$match": {"chunk_id": chunk_id, "cluster.type": "cluster"}},
@@ -18,28 +21,27 @@ def get_counts(chunk_id, database=("192.168.0.99:30000", "twitter", "tweets")):
                                        "address_type": {"$first": "$cluster.address.classification.abbreviated"}}},
                            {"$group": {"_id": "$address_type", "count_by_group": {"$sum": 1}}}])
 
-    df = pd.DataFrame(result)
+    df = pd.DataFrame(list(result))
     try:
         col_index = df.columns.get_loc("_id")
         row_index = pd.isnull(df["_id"]).tolist().index(True)
         df.iloc[row_index, col_index] = "NoAddress"
     except ValueError:
         pass
+
     df.set_index("_id", inplace=True)
 
     return df
 
-result_list = []
 
+results = Parallel(n_jobs=-1)(delayed(get_counts)(chunk_id) for chunk_id in range(1000))
 
-results = Parallel(n_jobs=-1)(delayed(get_counts)(chunk_id) for chunk_id in range(3))
-
-print(results)
 
 new_df = results[0]
 for index_num in range(1, len(results)):
-    new_df["count_by_group"] += result_list[index_num]["count_by_group"]
+    new_df = new_df.add(results[index_num], fill_value=0)
 
-print(new_df)
+print("Finished process at %s" % datetime.now())
+new_df.to_csv("summary.csv")
 
 
