@@ -7,9 +7,26 @@ Python version: 3.4
 
 import pymongo
 import pandas as pd
+from datetime import datetime
+from joblib import Parallel, delayed
+
+# set the number of chunks to process / for debugging
+CHUNKS_TO_PROCESS = 3
 
 
 def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "tweets")):
+
+    """
+    Given a specific chunk_id, process that chunk and return a dictionary of 3 pandas data frames,
+    that contain the summary statistics.
+    :param chunk_id: (int) chunk number
+    :param connection: (tuple) mongo database parameters
+    :return: dictionary of 3 pandas data frames
+    """
+
+    start_time = datetime.now()
+    print("Doing chunk_id: %d, at: %s" % (chunk_id, start_time))
+
     db = pymongo.MongoClient(connection[0])[connection[1]][connection[2]]
 
     # count users with valid residential clusters and keep track of their size distribution
@@ -49,8 +66,7 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
         else:
             print("unexpected input type!", one_user)
 
-    user_types = pd.DataFrame(users_by_types, index=[chunk_id])
-
+    user_types_df = pd.DataFrame(users_by_types, index=[chunk_id])
 
     # grab users by residential and commercial clusters
     res_com_users = db.aggregate([{"$match": {"chunk_id": chunk_id, "cluster.type": "cluster"}},
@@ -67,9 +83,8 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
         if len(user["all_types"]) == 2:
             users_with_both_res_com += 1
 
-    user_types["users_with_RC"] = [users_with_both_res_com]
-    user_types["users_with_dominant_clusters"] = [number_of_dominant_users]
-
+    user_types_df["users_with_RC"] = [users_with_both_res_com]
+    user_types_df["users_with_dominant_clusters"] = [number_of_dominant_users]
 
     # users with valid residential clusters for each month
     all_months = db.aggregate([{"$match": {"chunk_id": chunk_id,
@@ -84,7 +99,6 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
                                {"$project": {"months": 1, "_id": 0}}
                                ])["result"]
 
-
     number_months = {}
     for int_months in [len(x["months"]) for x in all_months]:
         try:
@@ -95,25 +109,23 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
     number_months = pd.DataFrame.from_dict(number_months, orient="index")
     number_months.columns = ["Users with months"]
 
-    return_dict = {"user_types": user_types,
+    return_dict = {"user_types": user_types_df,
                    "dominant_distribution": count_dist,
                    "months_distribution": number_months}
 
-    print(return_dict["user_types"])
-    print(return_dict["dominant_distribution"])
-    print(return_dict["months_distribution"])
+    print("Finished querying chunk: %3.d at: %s in %s" % (chunk_id, datetime.now(), datetime.now() - start_time))
 
     return return_dict
 
 
-results = []
-for chunk_number in range(3):
-    results.append(get_stats_one_chunk(chunk_number))
+results = Parallel(n_jobs=-1)(delayed(get_stats_one_chunk)(chunk_number for chunk_number in range(CHUNKS_TO_PROCESS)))
 
 
 # concatenate data frames together
 dominant_distribution = results[0]["dominant_distribution"]
 months_distribution = results[0]["months_distribution"]
+
+print("Start combining chunks at: %s" % datetime.now())
 
 for chunk_number in range(1, len(results)):
     dominant_distribution = dominant_distribution.add(results[chunk_number]["dominant_distribution"], fill_value=0)
@@ -122,6 +134,6 @@ for chunk_number in range(1, len(results)):
 user_types = pd.concat([one_item["user_types"] for one_item in results])
 
 # print/save results
-print(user_types)
-print(dominant_distribution)
-print(months_distribution)
+user_types.to_csv("user_types.csv")
+dominant_distribution.to_csv("dominant_distribution.csv")
+months_distribution.to_csv("months_distribution.csv")
