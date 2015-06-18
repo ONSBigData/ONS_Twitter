@@ -5,13 +5,15 @@ Date:           09/06/2015
 Python version: 3.4
 """
 
+from datetime import datetime
+
 import pymongo
 import pandas as pd
-from datetime import datetime
 from joblib import Parallel, delayed
 
+
 # set the number of chunks to process / for debugging
-CHUNKS_TO_PROCESS = 3
+CHUNKS_TO_PROCESS = 1000
 
 
 def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "tweets")):
@@ -35,11 +37,14 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
                                    {"$group": {"_id": "total_dominant",
                                                "number_of_dominant_clusters": {"$sum": 1},
                                                "cluster_sizes": {"$push": "$size"}}}
-                                   ])["result"]
+                                   ])
+
+    dominant_users = list(dominant_users)
 
     count_dist = pd.DataFrame.from_dict({x: dominant_users[0]["cluster_sizes"].count(x)
                                          for x in dominant_users[0]["cluster_sizes"]},
                                         orient="index")
+
     count_dist.columns = ["count"]
     count_dist.sort_index(inplace=True)
 
@@ -52,7 +57,9 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
                                                  "cluster_type": {"$first": "$cluster.type"}}},
                                      {"$group": {"_id": "$user_id",
                                                  "user_cluster_types": {"$addToSet": "$cluster_type"}}}
-                                     ])["result"]
+                                     ])
+
+    no_cluster_users = list(no_cluster_users)
 
     users_by_types = {"only_noise": 0, "only_cluster": 0, "both": 0}
 
@@ -75,7 +82,9 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
                                               "type": {"$first": "$cluster.address.classification.abbreviated"}}},
                                   {"$match": {"type": {"$in": ["C", "R"]}}},
                                   {"$group": {"_id": "$user_id", "all_types": {"$addToSet": "$type"}}}
-                                  ])["result"]
+                                  ])
+
+    res_com_users = list(res_com_users)
 
     users_with_both_res_com = 0
 
@@ -97,7 +106,9 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
                                {"$match": {"count": {"$gt": 2}}},
                                {"$group": {"_id": "$user_id", "months": {"$addToSet": "$_id.month"}}},
                                {"$project": {"months": 1, "_id": 0}}
-                               ])["result"]
+                               ])
+
+    all_months = list(all_months)
 
     number_months = {}
     for int_months in [len(x["months"]) for x in all_months]:
@@ -118,7 +129,7 @@ def get_stats_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "
     return return_dict
 
 
-results = Parallel(n_jobs=-1)(delayed(get_stats_one_chunk)(chunk_number for chunk_number in range(CHUNKS_TO_PROCESS)))
+results = Parallel(n_jobs=-1)(delayed(get_stats_one_chunk)(chunk_number) for chunk_number in range(CHUNKS_TO_PROCESS))
 
 
 # concatenate data frames together
