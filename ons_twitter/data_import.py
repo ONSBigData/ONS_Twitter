@@ -10,6 +10,7 @@ from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
 from json import dump
+
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
@@ -149,6 +150,8 @@ def import_one_file(csv_file_name,
     # set up debug if necessary
     if debug and debug_rows is None:
         debug_rows = 5
+
+    # TODO implement json imports
 
     # convert list of mongo connection parameters into mongo connections
     mongo_connection = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
@@ -356,9 +359,16 @@ def dump_errors(dump_this_data,
                             appending name to output file. If csv then file will be output
                             to csv. If json then a new json file will be created.
     :param: output_folder:  folder for all errors
-    :return:                number of dumped objects, -1 if errors occur
+    :return:                number of dumped objects
     """
 
+    # TODO update docstring
+
+    assert type(dump_this_data) is list or type(dump_this_data) is tuple, "dump_this_data must be iterable"
+    assert type(dump_this_data[0]) is list or type(dump_this_data[0]) is dict, "dump_this_data must be an iterable of" \
+                                                                               "dictionaries or lists"
+
+    # check if there are any documents to be dumped
     if len(dump_this_data) == 0:
         return 0
 
@@ -368,30 +378,34 @@ def dump_errors(dump_this_data,
     # create folder if needed
     create_folder(output_folder + error_type + "/")
 
-    outfile_beginning = "%s%s/%s_%s" %\
-                  (output_folder,
-                   error_type,
-                   find_file_name(input_file)[1][:-len(file_ext)],
-                   error_type)
+    # specify beginning of filename
+    outfile_beginning = "%s%s/%s_%s" % \
+                        (output_folder,
+                         error_type,
+                         find_file_name(input_file)[1][:-len(file_ext)],
+                         error_type)
 
+    # infer type of input from type, list -> csv and dict -> json
     if type(dump_this_data[0]) is dict:
+        # add file extension
         outfile = outfile_beginning + ".json"
 
+        # dump json
         with open(outfile, "w", newline="\n") as out_file:
             dump(dump_this_data, out_file, sort_keys=True, indent=4)
 
         return len(dump_this_data)
 
     elif type(dump_this_data[0]) is list:
+        # add file extension
         outfile = outfile_beginning + ".csv"
 
+        # write to csv
         with open(outfile, "w", newline="\n") as out_file:
             writing_files = writer(out_file, quoting=QUOTE_NONNUMERIC, delimiter=",")
             writing_files.writerows(dump_this_data)
+
         return len(dump_this_data)
-    else:
-        print("input file: ", input_file, "\n must be of type .csv or .json")
-        return -1
 
 
 def insert_json_mongo(folder_name,
