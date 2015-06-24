@@ -379,9 +379,7 @@ def dump_errors(dumped_list,
 
 
 def insert_json_mongo(folder_name,
-                      database,
-                      collection,
-                      mongo_ip="127.0.0.1:27017",
+                      mongo_connection,
                       upsert=False):
     """
     Import all JSON files to a specified mongodb server into database.collection.
@@ -397,6 +395,11 @@ def insert_json_mongo(folder_name,
 
     # find all files in directory
     file_names = listdir(folder_name)
+
+    # deconstruct mongodb connection tuple
+    mongo_ip = mongo_connection[0]
+    database = mongo_connection[1]
+    collection = mongo_connection[2]
 
     # construct command wrapper
     if upsert:
