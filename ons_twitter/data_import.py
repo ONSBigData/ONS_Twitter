@@ -9,21 +9,22 @@ Python version: 3.4
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
+from json import dump
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
 from joblib import Parallel, delayed
+
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 
 
-def import_csv(source,
-               mongo_connection,
-               mongo_address,
-               header=False,
-               debug=False,
-               print_progress=0):
-
+def import_file(source,
+                mongo_connection,
+                mongo_address,
+                header=False,
+                debug=False,
+                print_progress=0):
     """
     Function imports a list of csv files containing tweets into mongodb database. For each tweet, the function finds
     its closest address point (within 300m) and then creates a dictionary of tweet information. This information is
@@ -53,12 +54,12 @@ def import_csv(source,
 
     # if source is a single file then process simply
     if one_file:
-        aggregated_results = import_one_csv(source,
-                                            mongo_connection=mongo_connection,
-                                            mongo_address=mongo_address,
-                                            header=header,
-                                            debug=debug,
-                                            print_progress=print_progress)
+        aggregated_results = import_one_file(source,
+                                             mongo_connection=mongo_connection,
+                                             mongo_address=mongo_address,
+                                             header=header,
+                                             debug=debug,
+                                             print_progress=print_progress)
     else:
         # process contents of folder using joblib in parallel
 
@@ -67,13 +68,13 @@ def import_csv(source,
 
         # decide on parallel mongodb lookup
         if type(mongo_address[0]) is str:
-            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
-                                                                  mongo_connection,
-                                                                  mongo_address,
-                                                                  header,
-                                                                  debug,
-                                                                  None,
-                                                                  print_progress) for filename in file_list)
+            results = Parallel(n_jobs=-1)(delayed(import_one_file)(filename,
+                                                                   mongo_connection,
+                                                                   mongo_address,
+                                                                   header,
+                                                                   debug,
+                                                                   None,
+                                                                   print_progress) for filename in file_list)
         else:
             # verbose
             print("\nMore than one address base were supplied!",
@@ -95,13 +96,13 @@ def import_csv(source,
                 i += 1
 
             # call parallel
-            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(param[0],
-                                                                  mongo_connection,
-                                                                  param[1],
-                                                                  header,
-                                                                  debug,
-                                                                  None,
-                                                                  print_progress) for param in mongo_chunk_iter)
+            results = Parallel(n_jobs=-1)(delayed(import_one_file)(param[0],
+                                                                   mongo_connection,
+                                                                   param[1],
+                                                                   header,
+                                                                   debug,
+                                                                   None,
+                                                                   print_progress) for param in mongo_chunk_iter)
 
         # aggregate statistics
         aggregated_results = np.sum(results, axis=0)
@@ -121,13 +122,13 @@ def import_csv(source,
     return aggregated_results
 
 
-def import_one_csv(csv_file_name,
-                   mongo_connection=None,
-                   mongo_address=None,
-                   header=False,
-                   debug=False,
-                   debug_rows=None,
-                   print_progress=0):
+def import_one_file(csv_file_name,
+                    mongo_connection=None,
+                    mongo_address=None,
+                    header=False,
+                    debug=False,
+                    debug_rows=None,
+                    print_progress=0):
     """
     Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base
 
@@ -341,7 +342,7 @@ def create_partition_csv(input_csv,
     return len(tweets)
 
 
-def dump_errors(dumped_list,
+def dump_errors(dump_this_data,
                 error_type,
                 input_file,
                 output_folder="data/output/errors/"):
@@ -349,7 +350,7 @@ def dump_errors(dumped_list,
     Dumps errors from a list to a new file. Works with both json and csv files.
     Returns the number of objects in the list. If list is empty, then does not write.
 
-    :param dumped_list:     list of errors to dump, can be empty for no action
+    :param dump_this_data:     list of errors to dump, can be empty for no action
     :param error_type:      type of error, will generate new folder for each type
     :param input_file:      name of input file. Function keeps track of this, by
                             appending name to output file. If csv then file will be output
@@ -358,22 +359,39 @@ def dump_errors(dumped_list,
     :return:                number of dumped objects, -1 if errors occur
     """
 
-    if len(dumped_list) == 0:
+    if len(dump_this_data) == 0:
         return 0
+
+    # get the type of the input file
+    file_ext = find_file_extension(input_file).lower()
+
+    # create folder if needed
+    create_folder(output_folder + error_type + "/")
+
+    outfile_beginning = "%s%s/%s_%s" %\
+                  (output_folder,
+                   error_type,
+                   find_file_name(input_file)[1][:-len(file_ext)],
+                   error_type)
+
+    if type(dump_this_data[0]) is dict:
+        outfile = outfile_beginning + ".json"
+
+        with open(outfile, "w", newline="\n") as out_file:
+            dump(dump_this_data, out_file, sort_keys=True, indent=4)
+
+        return len(dump_this_data)
+
+    elif type(dump_this_data[0]) is list:
+        outfile = outfile_beginning + ".csv"
+
+        with open(outfile, "w", newline="\n") as out_file:
+            writing_files = writer(out_file, quoting=QUOTE_NONNUMERIC, delimiter=",")
+            writing_files.writerows(dump_this_data)
+        return len(dump_this_data)
     else:
-        file_ext = find_file_extension(input_file)
-        create_folder(output_folder + error_type + "/")
-        if file_ext == ".csv":
-            outfile = output_folder + error_type + "/" + find_file_name(input_file)[1][:-len(file_ext)] + \
-                "_" + error_type + file_ext
-            with open(outfile, "w", newline="\n") as out_file:
-                writing_files = writer(out_file, quoting=QUOTE_NONNUMERIC, delimiter=",")
-                writing_files.writerows(dumped_list)
-        elif file_ext == ".JSON":
-            pass
-        else:
-            print("input file: ", input_file, "\n must be of type .csv or .JSON")
-            return -1
+        print("input file: ", input_file, "\n must be of type .csv or .json")
+        return -1
 
 
 def insert_json_mongo(folder_name,
