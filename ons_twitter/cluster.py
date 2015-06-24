@@ -8,7 +8,6 @@ Python version: 3.4
 from datetime import datetime
 import time
 import csv
-
 import numpy as np
 from bson.son import SON
 from pymongo.errors import OperationFailure, ConnectionFailure, AutoReconnect

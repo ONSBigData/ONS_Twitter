@@ -9,12 +9,10 @@ Python version: 3.4
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
-
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
 from joblib import Parallel, delayed
-
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 
