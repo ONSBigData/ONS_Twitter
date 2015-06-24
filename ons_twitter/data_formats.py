@@ -17,7 +17,7 @@ from ons_twitter.supporting_functions import distance
 from ons_twitter.supporting_functions import create_folder
 
 
-class Tweet():
+class Tweet(object):
     """
     Tweet class that contains a JSON object of tweet information.
     """
