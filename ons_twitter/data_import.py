@@ -417,16 +417,24 @@ def insert_json_mongo(folder_name,
                       mongo_connection,
                       upsert=False):
     """
-    Import all JSON files to a specified mongodb server into database.collection.
+    Import all JSON files to a specified mongodb server into database.collection. This uses
+    command line arguments instead of pymongo, so will not give any errors or other output.
+    Caution!!! Only use for importing address base into completely empty database.
 
     :param folder_name:     Folder containing all JSON objects to be imported.
-    :param database:        Name of database where import will be made.
-    :param collection:      Name of collection to be updated.
-    :param mongo_ip:        IP address of mongo host (with port number). Base value: local mongo at
-                            127.0.0.1:27017
+    :param mongo_connection:Usual list of mongodb connection parameters. (ip:host, database, collection)
     :param upsert:          If true then import will be made with upsert. See mongodb documentation.
     :return:                Number of files inserted.
+
+
+    :type folder_name       str
+    :type mongo_connection  list or tuple
+    :type upsert            bool
+    :rtype                  int
     """
+
+    assert type(mongo_connection) is tuple or type(mongo_connection) is list, "Mongo connection must be a tuple or list"
+    assert len(mongo_connection), "Mongo connection must be of form (ip:host, database, collection)"
 
     # find all files in directory
     file_names = listdir(folder_name)
@@ -443,13 +451,13 @@ def insert_json_mongo(folder_name,
         wrapper = "mongoimport --host %s -d %s -c %s --jsonArray --file " % (mongo_ip, database, collection)
 
     start_time = datetime.now()
-    print("\n\n ***** Start mongodb inserts ****", start_time)
+    print("\n\n ***** Start mongodb inserts **** at: %s" % start_time)
 
     # run all commands
     for file_name in file_names:
-        print("\n **** Starting insert: ", datetime.now())
+        print("\n **** Starting insert: %s" % datetime.now())
         print(wrapper + folder_name + file_name)
         system(wrapper + folder_name + file_name)
 
-    print("\nFinished inserts in: ", datetime.now() - start_time)
+    print("\nFinished inserts in: %s" % (datetime.now() - start_time))
     return len(file_names)
