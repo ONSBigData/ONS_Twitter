@@ -8,7 +8,7 @@ Python version: 3.4
 import ons_twitter.data_import as data_import
 
 
-RUN_THESE_TESTS = {"create_partition"}
+RUN_THESE_TESTS = {"import_csv"}
 mongo_address = ("192.168.0.98:30001", "twitter", "address")
 test_mongo = ("127.0.0.1:27017", "lib_test")
 

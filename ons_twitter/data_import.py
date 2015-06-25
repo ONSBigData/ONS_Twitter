@@ -131,7 +131,8 @@ def import_one_file(csv_file_name,
                     debug_rows=None,
                     print_progress=0):
     """
-    Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base
+    Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base.
+    Invalid tweets will be filtered into a separate folder.
 
     :param csv_file_name:       location on csv file containing tweets
     :param mongo_connection:    list of mongodb database parameters (ip:host, database, collection) to
@@ -141,11 +142,8 @@ def import_one_file(csv_file_name,
                                 mongodb address base
     :param print_progress:      integer specifying the number of reads at which diagnostics should be
                                 printed. 0 will print no diagnostics
-    :return:                    numpy array of number of
-                                read_tweets/no_geo tweets/non_gb and failed_tweets/
-                                 converted_no_geo/ no_address / duplicates
-                                successfully converted tweets (no geo -> geo),
-                                prints diagnostics and inserts into database
+    :return:                    numpy array with number of
+                                inserted, no_geo, non_GB, failed, converted, no_address, duplicate, mongo_error tweets
     """
     # set up debug if necessary
     if debug and debug_rows is None:
@@ -264,6 +262,7 @@ def import_one_file(csv_file_name,
     dump_errors(duplicates, "duplicates", csv_file_name)
     print("Finished", csv_file_name, datetime.now())
 
+    # return insert statistics
     return np.array([len(read_tweets) - len(duplicates), len(no_geo),
                      len(non_gb), len(failed_tweets),
                      len(converted_no_geo), len(no_address), len(duplicates), len(mongo_error)], dtype="int32")
@@ -383,13 +382,14 @@ def dump_errors(dump_this_data,
     :rtype                  int
     """
 
-    assert type(dump_this_data) is list or type(dump_this_data) is tuple, "dump_this_data must be iterable"
-    assert type(dump_this_data[0]) is list or type(dump_this_data[0]) is dict, "dump_this_data must be an iterable of" \
-                                                                               "dictionaries or lists"
+    assert type(dump_this_data) in (list, tuple), "dump_this_data must be iterable"
 
     # check if there are any documents to be dumped
     if len(dump_this_data) == 0:
         return 0
+
+    assert type(dump_this_data[0]) is list or type(dump_this_data[0]) is dict, "dump_this_data must be an iterable of" \
+                                                                               "dictionaries or lists"
 
     # get the type of the input file
     file_ext = find_file_extension(input_file).lower()
