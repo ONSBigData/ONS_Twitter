@@ -148,7 +148,7 @@ class Tweet(object):
                     self.dictionary["tweet"]["lat_long"] = data["geo"]["coordinates"]
                     self.dictionary["tweet"]["coordinates"] = lat_long_to_osgb(
                         self.dictionary["tweet"]["lat_long"])
-                except ValueError or KeyError:
+                except (ValueError, KeyError, TypeError):
                     self.dictionary["tweet"]["lat_long"] = ("NA", "NA")
                     self.dictionary["tweet"]["coordinates"] = ("NA", "NA")
                     self.error_number = 1

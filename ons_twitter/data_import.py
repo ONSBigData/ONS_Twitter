@@ -9,8 +9,7 @@ Python version: 3.4
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
-from json import dump
-
+from json import dump, loads, load
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
@@ -324,8 +323,7 @@ def import_one_json(json_file_name,
     mongo_address = pymongo.MongoClient(mongo_address[0])[mongo_address[1]][mongo_address[2]]
 
     # start reading csv file
-    with open(json_file_name, 'r') as in_tweets:
-        input_rows = reader(in_tweets, delimiter=",")
+    with open(json_file_name, 'r', encoding="utf-8") as in_tweets:
 
         # start indexing, initiate lists for collecting tweets
         index = 0
@@ -337,22 +335,16 @@ def import_one_json(json_file_name,
         no_address = []
         mongo_error = []
 
-        # iterate over each row of input csv
-        for row in input_rows:
-
-            # handle header row
-            if header and index == 0:
-                header_row = row
-                if debug:
-                    print("\nHeader row: ")
-                    print(header_row)
-                    print("\n ***")
-                index += 1
+        for one_row in in_tweets:
+            # skip empty rows
+            if len(one_row) <= 3:
                 continue
+
+            row = loads(one_row)
 
             # read file row by row
             index += 1
-            new_tweet = Tweet(row, method="csv")
+            new_tweet = Tweet(row, method="json")
 
             if debug:
                 # print tweet before finding address
@@ -368,6 +360,9 @@ def import_one_json(json_file_name,
             if new_tweet.get_errors() in (1, 3):
                 # save raw input in no_geo
                 no_geo.append(row)
+            elif new_tweet.get_errors() == 5:
+                index -= 1
+                continue
             elif new_tweet.get_errors() == -1:
                 # save raw input in failed_tweets
                 failed_tweets.append(row)
@@ -427,7 +422,7 @@ def import_one_json(json_file_name,
         try:
             mongo_connection.insert(tweet.dictionary)
         except DuplicateKeyError:
-            duplicates.append(tweet.get_csv_format())
+            duplicates.append(tweet.dictionary)
 
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", json_file_name)
@@ -581,7 +576,7 @@ def dump_errors(dump_this_data,
 
         # dump json
         with open(outfile, "w", newline="\n") as out_file:
-            dump(dump_this_data, out_file, sort_keys=True, indent=4)
+            dump(dump_this_data, out_file, sort_keys=True, indent=2)
 
         return len(dump_this_data)
 
