@@ -489,15 +489,20 @@ def lat_long_to_osgb(lat_long):
 def parse_wrong_data(data, debug=False):
     """
     Used for parsing incorrect csv data formats into correct list objects.
-    Some tweets contain "," in the place description or user name. This can cause the raw input list to be too long.
-    If the last object contains the tweet information and the list is longer then expected, then this function
-    will find the extra element and remove it from the list.
+    Some tweets contain "," in the place description or user name. If the quotes are incorrect then this can cause
+    the raw input list to be too long. If the last object contains the tweet information and the list is longer than
+    expected, then this function will find the extra element and remove it from the list.
     A new, cleaned data is returned.
     Main goal is to keep Longitude/Latitude information intact.
-    :param data:    list resulting from csv reader - one row. User should check whether last element is non-empty. This
+
+    :param data:    List resulting from csv reader - one row. User should check whether last element is non-empty. This
                     indicates invalid row.
-    :param debug:   boolean for printing debugging information
-    :return:        cleaned data as as list of correct length (not guaranteed)
+    :param debug:   True for printing debug info.
+    :return:        Cleaned data as as list of correct length (not guaranteed)
+
+    :type data      list
+    :type debug     bool
+    :rtype          list
     """
 
     if debug:
@@ -511,7 +516,7 @@ def parse_wrong_data(data, debug=False):
     # convert to string
     string_data = ",".join(new_data)
 
-    # read json document
+    # read json document of valid language codes
     language_codes_json = load(open("ons_twitter/twitter_lang_codes.JSON"))
     language_codes = []
     for one_item in language_codes_json:
@@ -546,6 +551,9 @@ def parse_wrong_data(data, debug=False):
     # put data back together
     data = before_new_data + new_data + after_new_data
 
+    # print debug info
     if debug:
         print("\n Final output:\n", data, "\n")
+
+    # return the possibly! clean data list
     return data
