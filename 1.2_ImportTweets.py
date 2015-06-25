@@ -49,6 +49,6 @@ for file_name in files:
 
 # insert all files from the output folder. Note that the first argument can be a file as well,
 # in which case the function imports that file only
-data_import.import_file(output_folder,
-                        mongo_connection=twitter_mongo,
-                        mongo_address=mongo_address)
+data_import.import_files(output_folder,
+                         mongo_connection=twitter_mongo,
+                         mongo_address=mongo_address)

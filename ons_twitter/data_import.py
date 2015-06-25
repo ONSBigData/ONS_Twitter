@@ -10,33 +10,47 @@ from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
 from json import dump, loads
+
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
 from joblib import Parallel, delayed
+
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 
 
-def import_file(source,
-                mongo_connection,
-                mongo_address,
-                header=False,
-                debug=False,
-                print_progress=0):
+def import_files(source,
+                 mongo_connection,
+                 mongo_address,
+                 header=False,
+                 debug=False,
+                 print_progress=0):
     """
     Function imports a list of csv files containing tweets into mongodb database. For each tweet, the function finds
     its closest address point (within 300m) and then creates a dictionary of tweet information. This information is
     then inserted into the database.
 
-    :param source:              Folder of CSV/JSON files. (JSON not working yet.) Can be single file as well.
-    :param mongo_connection:    Targeted database.
-    :param mongo_address:       List of mongodb address base databases.
-    :param header:              Boolean indicating presence of header row.
-    :param debug:               Boolean for debugging.
+    :param source:              Folder of CSV/JSON files. Can be single file as well.
+    :param mongo_connection:    Targeted mongodb database as a list of parameters.
+                                (ip:host, database, collection)
+    :param mongo_address:       List of mongodb address base databases. Or a single mongodb address base.
+                                (ip:host, database, collection)
+                                If a list of mongos is given then address lookups will be carried out in
+                                parallel (per file).
+    :param header:              True if csv files have header rows that need to be ignored.
+    :param debug:               True for debug statements . Will only import first 5 tweets from each file.
     :param print_progress:      Integer specifying intensity of verbosity. (Print at this many lines.)
     :return:                    Aggregated results from all files imported.
                                 Imported/Non_Geo/Non_GB/Failed/converted/no address/mongo_errors
+
+    :type source                str
+    :type mongo_connection      list or tuple
+    :type mongo_address         list or tuple
+    :type header                bool
+    :type debug                 bool
+    :type print_progress        int
+    :rtype                      np.ndarray
     """
 
     # capture start_time
@@ -53,6 +67,11 @@ def import_file(source,
 
     # if source is a single file then process simply
     if one_file:
+        # pick only the first address database if more than is supplied
+        if type(mongo_address[0]) is not str:
+            print("more than one address database is supplied for a single file!\nUsing only the first.")
+            mongo_address = mongo_address[1]
+
         aggregated_results = import_one_file(source,
                                              mongo_connection=mongo_connection,
                                              mongo_address=mongo_address,
@@ -85,7 +104,6 @@ def import_file(source,
 
             # create an iterable
             dummy_mongo = mongo_address * ((len(file_list) // len(mongo_address)) + 1)
-            """:type : list"""
             dummy_mongo = dummy_mongo[:len(file_list)]
             mongo_chunk_iter = []
 
@@ -103,7 +121,7 @@ def import_file(source,
                                                                    None,
                                                                    print_progress) for param in mongo_chunk_iter)
 
-        # aggregate statistics
+        # count up all the results
         aggregated_results = np.sum(results, axis=0)
 
     # print stats
@@ -491,8 +509,8 @@ def create_partition_csv(input_csv,
     to create smaller chunks of the original data. This is useful for debugging.
 
     :param input_csv:       Location of raw tweets to be split
-    :param output_folder:   Location of subset of csv files that can be used for testing. If not specified then will output
-                            to same folder with "_subset" appended.
+    :param output_folder:   Location of subset of csv files that can be used for testing. If not specified
+                            then will output to same folder with "_subset" appended.
     :param num_rows:        Number of tweets in new test dataset. Default is 10000.
     :param chunk_size:      Number of rows in each chunk. If positive then function will create a set of smaller files.
     :return:                Number of rows written to new files.

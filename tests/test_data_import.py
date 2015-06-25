@@ -35,15 +35,15 @@ test_dict = [{"north": 1.22, "east": 2.3, "name": "Lebron James"},
 
 if "import_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     twitter_mongo = (test_mongo[0], test_mongo[1], "csv_import")
-    data_import.import_file("data/subset.csv",
-                            mongo_connection=twitter_mongo,
-                            mongo_address=mongo_address)
+    data_import.import_files("data/subset.csv",
+                             mongo_connection=twitter_mongo,
+                             mongo_address=mongo_address)
 
 if "import_json" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     twitter_mongo = (test_mongo[0], test_mongo[1], "json_import")
-    data_import.import_file("data/5minute.json",
-                            mongo_connection=twitter_mongo,
-                            mongo_address=mongo_address)
+    data_import.import_files("data/5minute.json",
+                             mongo_connection=twitter_mongo,
+                             mongo_address=mongo_address)
 
 if "dump_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     data_import.dump_errors(test_list, "test_csv", "hello/test/1.csv", test_output + "csv_dump/")

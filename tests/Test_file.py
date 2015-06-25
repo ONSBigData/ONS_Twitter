@@ -29,6 +29,6 @@ create_partition_csv("data/input/Tweets_Apr_Oct_test_subset0.csv",
 # test_twitter_mongo = ("127.0.0.1:27017", "test", "tweets")
 #
 # if __name__ == "__main__":
-#     a = import_file("data/input/chunk_test",
+#     a = import_files("data/input/chunk_test",
 #                    mongo_connection=test_twitter_mongo,
 #                    mongo_address=mongo_address)
