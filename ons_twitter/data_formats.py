@@ -276,22 +276,32 @@ class Tweet(object):
         return csv_row
 
 
-class Address():
+class Address(object):
     """
     Object of type Address corresponds to a singe data point of the UK address base.
-    Most important part is a JSON object with all the info from the original csv file.
+    It represents the original csv row as a dictionary and keeps track of any errors occurring during the
+    initialisation of the object. The Address object is then used to build the AddressBase that is capable
+    of setting up a mongodb database, suitable for UK geo queries.
     """
 
     def __init__(self, data, header_row=None):
         """
-        Supply a list or tuple of data points and a corresponding header file to insert data
-        into object.
-        :param data:        row of csv file with observation
-        :param header_row:  header row of original csv file - used for checking correctness of input
-        :return:            object of type address
+        Initialise the Address point from a single row of a csv file that is represented as a list or tuple.
+
+        The structure of the row should be as follows:
+        postcode, UPRN, X_coordinate (easting), Y_coordinate (northing), classification,
+        local authority (oslaua), ward, output area, lsoa (lower super), msoa (middle super), workplace zone
+
+        :param data:        Row of csv file with observation
+        :param header_row:  Header row of original csv file - used for checking correctness of input. Can be omitted.
+        :return:            Object of type address
+
+        :type data          list or tuple
+        :type header_row    list or tuple or None
+        :rtype              Address
         """
 
-        # initialise error codes and empty dictionary
+        # initialise error code and empty dictionary
         self.error_code = 0
         empty_dictionary = {"UPRN": "NA",
                             "coordinates": ("NA", "NA"),
@@ -322,6 +332,7 @@ class Address():
                 self.dictionary = None
                 self.error_code = 1
 
+        # if header was correct, continue
         if self.error_code == 0:
             # start populating dictionary
             self.dictionary = empty_dictionary
@@ -345,15 +356,19 @@ class Address():
     def get_bson(self):
         """
         Return a bson object of the dictionary held within the address.
-        This is to increase compatibility with mongodb
+        This is to increase compatibility with mongodb.
+
+        :rtype  bson.son.SON or None
         """
+
+        # if there is a valid dictionary  return the bson object
         if self.dictionary is not None:
             return SON(self.dictionary)
         else:
-            return -1
+            return None
 
 
-class AddressBase():
+class AddressBase(object):
     """
     Object with collection of addresses that automatically dumps json files as populated.
     """
@@ -381,7 +396,13 @@ class AddressBase():
         :param new_address: object of type Address for insertion.
         :return:    none
         """
-        self.collection.append(new_address.get_bson())
+
+        # if address is valid, append to collection
+        to_append = new_address.get_bson()
+
+        if to_append is not None:
+            self.collection.append(new_address.get_bson())
+
         # as it reaches chunk size limit, dump it into csv
         if len(self.collection) == self.chunk_size:
             self.write_to_json()
