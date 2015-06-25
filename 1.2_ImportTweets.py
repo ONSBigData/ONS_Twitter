@@ -6,8 +6,10 @@ Date:           11/March/2015
 Python version: 3.4
 """
 
-import ons_twitter.data_import as data_import
 from datetime import datetime
+
+import ons_twitter.data_import as data_import
+
 
 """
 Specify mongodb address databases.
@@ -48,5 +50,5 @@ for file_name in files:
 # insert all files from the output folder. Note that the first argument can be a file as well,
 # in which case the function imports that file only
 data_import.import_file(output_folder,
-                       mongo_connection=twitter_mongo,
-                       mongo_address=mongo_address)
+                        mongo_connection=twitter_mongo,
+                        mongo_address=mongo_address)

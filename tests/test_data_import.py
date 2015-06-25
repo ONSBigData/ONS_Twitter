@@ -8,14 +8,14 @@ Python version: 3.4
 import ons_twitter.data_import as data_import
 
 
-RUN_THESE_TESTS = {"dump_json"}
+RUN_THESE_TESTS = {"create_partition"}
 mongo_address = ("192.168.0.98:30001", "twitter", "address")
 test_mongo = ("127.0.0.1:27017", "lib_test")
 
 test_output = "data/output/"
 
 """
-options: "all", "import_csv" , "dump_csv", "dump_json",
+options: "all", "import_csv" , "dump_csv", "dump_json"
 """
 
 test_list = [[1.22, 3.5, "mike test", "en", "", "Isle of Wight", "GB", "50.63", "-1.19", "Happy tonight"],

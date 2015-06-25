@@ -275,25 +275,26 @@ def create_partition_csv(input_csv,
                          chunk_size=10000,
                          header=False):
     """
-    Create a new csv file with a subset of tweets from original raw data.
-    Use for debugging code.
-    Code will skip the first row to account for possible header row.
-    :param input_csv: location of raw tweets to be inserted into mongodb
-    :param output_folder:  location of subset of tweets that can be used for testing. If not specified then will output
-                        to same folder with "_test_subset" appended.
-    :param num_rows: number of tweets in new test dataset. Default is 1000.
-    :param chunk_size: number of rows in each chunk. If not zero then will create more files in directory.
-    :return: number of tweets written
+    Create a set of new csv files in the output folder from the input_csv. Use the chunk_size parameter
+    to create smaller chunks of the original data. This is useful for debugging.
+
+    :param input_csv:       Location of raw tweets to be split
+    :param output_folder:   Location of subset of csv files that can be used for testing. If not specified then will output
+                            to same folder with "_subset" appended.
+    :param num_rows:        Number of tweets in new test dataset. Default is 10000.
+    :param chunk_size:      Number of rows in each chunk. If positive then function will create a set of smaller files.
+    :return:                Number of rows written to new files.
+
+    :type input_csv         str
+    :type output_folder     str or None
+    :type num_rows          int
+    :type chunk_size        int
+    :type header            bool
+    :rtype                  int
     """
 
-    # create switch
-    if num_rows <= 0:
-        dont_stop = True
-    else:
-        dont_stop = False
-
     # check if chunks are required
-    if chunk_size == 0:
+    if chunk_size <= 0:
         do_chunks = False
         chunk_size = 1
     else:
@@ -301,48 +302,61 @@ def create_partition_csv(input_csv,
 
     # check if output is specified
     if output_folder is None:
-        output_csv = input_csv[:-4] + "_test_subset"
+        output_csv = "%s_" % input_csv[:-4]
     else:
         create_folder(output_folder)
         output_csv = output_folder
 
+    # initialise chunk index
     chunk_index = 0
 
-    # open reader
+    # open file for splitting
     with open(input_csv, 'r') as read_input:
+        # read with csv module
         in_tweets = reader(read_input, delimiter=",")
 
         # initiate list to collect tweets and start indexing
         index = 0
         tweets = []
+
         for row in in_tweets:
+            # skip header if specified
             if index == 0 and header:
                 index += 1
                 continue
-            if index < num_rows or dont_stop:
-                index += 1
-                tweets.append(row)
 
-                if (index % chunk_size == 0) and do_chunks:
-                    output_csv_name = output_csv + find_file_name(input_csv)[1][:-4] + "_" + str(chunk_index) + ".csv"
+            index += 1
+            tweets.append(row)
 
-                    # start writing tweets
-                    with open(output_csv_name, 'w', newline="\n") as out_csv:
-                        out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
-                        out_tweets.writerows(tweets)
-                    chunk_index += 1
-                    tweets.clear()
-            else:
+            # if chunk limit is reached then split out new csv
+            if (index % chunk_size == 0) and do_chunks:
+
+                # create new name for csv
+                output_csv_name = "%s%s_%06d.csv" % (output_csv, find_file_name(input_csv)[1][:-4], chunk_index)
+
+                # start writing tweets
+                with open(output_csv_name, 'w', newline="\n") as out_csv:
+                    out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
+                    out_tweets.writerows(tweets)
+
+                # clear tweets and add increase chunk index
+                chunk_index += 1
+                tweets.clear()
+
+            # if break point (num_rows) is reached then stop
+            if index == num_rows:
                 break
 
-    # start writing tweets
+    # write out any remaining tweets
     if len(tweets) != 0:
-        output_csv_name = output_csv + find_file_name(input_csv)[1][:-4] + "_" + str(chunk_index) + ".csv"
+        output_csv_name = "%s%s_%06d.csv" % (output_csv, find_file_name(input_csv)[1][:-4], chunk_index)
         with open(output_csv_name, 'w', newline="\n") as out_csv:
             out_tweets = writer(out_csv, delimiter=",", quoting=QUOTE_NONNUMERIC)
             out_tweets.writerows(tweets)
+        tweets.clear()
 
-    return len(tweets)
+    # return the number of tweets written to disk
+    return index - 1 if header else index
 
 
 def dump_errors(dump_this_data,
