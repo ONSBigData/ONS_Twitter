@@ -350,19 +350,24 @@ def dump_errors(dump_this_data,
                 input_file,
                 output_folder="data/output/errors/"):
     """
-    Dumps errors from a list to a new file. Works with both json and csv files.
-    Returns the number of objects in the list. If list is empty, then does not write.
+    Dumps errors from a list to a new file. A list of dictionaries is dumped as a json file
+    while a list of lists is dumped as csv file (each list is a row).
+    The file will go into a subdirectory of the output folder, based on  the error type. This
+    helps with keeping track of your errors.
 
-    :param dump_this_data:     list of errors to dump, can be empty for no action
-    :param error_type:      type of error, will generate new folder for each type
-    :param input_file:      name of input file. Function keeps track of this, by
-                            appending name to output file. If csv then file will be output
-                            to csv. If json then a new json file will be created.
-    :param: output_folder:  folder for all errors
-    :return:                number of dumped objects
+    :param dump_this_data:  List of errors to dump, can be empty for no action.
+    :param error_type:      Type of error, will generate new folder for each type.
+    :param input_file:      Name of input file. Function keeps track of this, by
+                            appending name to output file. Again for quality control.
+    :param: output_folder:  Folder path for all errors.
+    :return:                Number of dumped errors.
+
+    :type dump_this_data    list
+    :type error_type        str
+    :type input_file        str
+    :type output_folder     str
+    :rtype                  int
     """
-
-    # TODO update docstring
 
     assert type(dump_this_data) is list or type(dump_this_data) is tuple, "dump_this_data must be iterable"
     assert type(dump_this_data[0]) is list or type(dump_this_data[0]) is dict, "dump_this_data must be an iterable of" \
