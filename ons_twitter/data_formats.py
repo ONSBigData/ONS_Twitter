@@ -462,24 +462,32 @@ def lat_long_to_osgb(lat_long):
     """
     Convert latitude, longitude coordinates to UK easting, northing coordinates.
 
-    :param lat_long: List or tuple of latitude, longitude coordinates.
-    :return: List of easting (X), northing (Y) coordinates.
+    :param lat_long:    One single pair of latitude, longitude coordinates.
+    :return:            A pair of easting (X), northing (Y) integer coordinates.
+
+    :type lat_long      list or tuple
+    :rtype              list
     """
+
     lat = lat_long[0]
     lng = lat_long[1]
+
     # Source is WSG84 (lat, lng) i.e. EPSG 4326:
     source = osr.SpatialReference()
     source.ImportFromEPSG(4326)
+
     # Target is osgb i.e. EPSG 27700:
     target = osr.SpatialReference()
     target.ImportFromEPSG(27700)
+
     # Prepare transformer
     transform = osr.CoordinateTransformation(source, target)
 
     # Create source point - coords are X, Y i.e. lng, lat:
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(lng, lat)
-    # Now transform it to target coord system:
+
+    # Now transform coordinates to target coord system:
     point.Transform(transform)
 
     # Return point as an (X, Y) tuple i.e. (easting, northing):
