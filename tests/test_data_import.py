@@ -6,9 +6,10 @@ Python version: 3.4
 """
 
 import ons_twitter.data_import as data_import
+from ons_twitter.data_formats import AddressBase
+from ons_twitter.data_import import insert_json_mongo
 
-
-RUN_THESE_TESTS = {"import_json", "import_csv"}
+RUN_THESE_TESTS = {}
 mongo_address = ("192.168.0.98:30001", "twitter", "address")
 test_mongo = ("127.0.0.1:27017", "lib_test")
 
@@ -51,3 +52,28 @@ if "dump_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
 if "dump_json" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     data_import.dump_errors(test_dict, "test_j", "hello/test/1.json", test_output + "csv_dump/")
 
+
+
+# specify address base csv location and temporary folder for json files
+address_base_csv_location = "../data/input/address/address_base.csv"
+address_json_folder = "data/output/address/"
+
+# specify destination mongodb database to hold addresses
+mongo_destination = (test_mongo[0], test_mongo[1], "address")
+
+
+# initialise AddressBase object
+address_base = AddressBase(folder_name=address_json_folder,
+                           chunk_size=1000,
+                           over_write_previous=True)
+
+# feed csv file into address_base to convert into json files, insert_list will be a list of json filenames
+insert_list = address_base.import_address_csv(input_file_location=address_base_csv_location,
+                                              terminate_at=-1)
+
+# indicate end of slicing
+
+
+# # import each small file into mongodb database
+# number_files = insert_json_mongo(folder_name=address_json_folder,
+#                                  mongo_connection=mongo_destination)

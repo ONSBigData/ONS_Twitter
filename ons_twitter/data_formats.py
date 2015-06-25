@@ -20,6 +20,8 @@ from ons_twitter.supporting_functions import create_folder
 
 
 class Tweet(object):
+
+    # TODO comment and optimise Tweet object
     """
     Tweet class that contains a JSON object of tweet information.
     """
@@ -375,13 +377,23 @@ class AddressBase(object):
 
     def __init__(self, folder_name, chunk_size=100000, over_write_previous=True):
         """
-        Initialise AddressBase object.
-        :param folder_name:     Folder to output JSON files to.
-        :param chunk_size:      Number of addresses in each chunk of output.
-                                Set this to -1 for one file.
+        Initialise AddressBase object. This object serves quality control purposes and is
+        used to split the csv address base into small manageable json files for the initial setup of mongodb
+        address base server
+
+        :param folder_name:         Folder to output JSON files to.
+        :param chunk_size:          Number of addresses in each chunk of output.
+                                    Set this to -1 for one file.
         :param over_write_previous: False if files created need not be overwritten.
-        :return:                AddressBase object.
+        :return:                    AddressBase object.
+
+        :type folder_name           str
+        :type chunk_size            int
+        :type over_write_previous   bool
+        :rtype                      AddressBase
         """
+
+        # create folder and initialise internals of the object
         create_folder(folder_name)
         self.collection = []
         self.folder_name = folder_name
@@ -392,9 +404,13 @@ class AddressBase(object):
 
     def add_address(self, new_address):
         """
-        Adds an Address type object to the AddressBase
-        :param new_address: object of type Address for insertion.
-        :return:    none
+        Adds an Address type object to the AddressBase.
+
+        :param new_address:     object of type Address for insertion.
+        :return:                Error code, 1 for invalid address, 0 for no errors
+
+        :type new_address:      Address
+        :rtype                  int
         """
 
         # if address is valid, append to collection
@@ -402,19 +418,28 @@ class AddressBase(object):
 
         if to_append is not None:
             self.collection.append(new_address.get_bson())
+        else:
+            print("Invalid address supplied", new_address.dictionary)
+            return 1
 
         # as it reaches chunk size limit, dump it into csv
         if len(self.collection) == self.chunk_size:
             self.write_to_json()
 
+        return 0
+
     def write_to_json(self):
         """
-        Function to write addresses to a single JSON file.
-        :return: none
+        Dump all addresses in the buffer to a single json file and clear out collection.
+
+        :return:    None
+
+        :rtype      None
         """
+
         # create new filename
-        # leading zeroes are there to increase read performance
-        file_name = self.folder_name + str(self.dump_index).zfill(8) + ".JSON"
+        # leading zeroes are there so that humans can keep track of import performance
+        file_name = "%s%08d.JSON" % (self.folder_name, self.dump_index)
         self.file_names.append(file_name)
 
         # only write if either file doesn't exist or overwrite is specified
@@ -427,50 +452,50 @@ class AddressBase(object):
         print("Dumped index: ", self.dump_index, datetime.now())
         self.dump_index += 1
 
+        return None
+
     def import_address_csv(self, input_file_location, header=True, terminate_at=-1):
         """
-        Imports a csv file for insertion into address base.
-        :param input_file_location: Location of address base file.
-        :param header: Boolean if csv contains header row. Checking will be done in this case.
-        :param terminate_at: Integer for debugging. Process terminates after this many rows.
-        :return: a list of all output files
+        Dump the csv file into the input_file_location for later insertion into mongodb.
+
+        :param input_file_location:     Location of address base file.
+        :param header:                  True if csv contains a header row. Data formats will be
+                                        checked in this case.
+        :param terminate_at:            Process terminates after this many rows. For debugging.
+        :return:                        A list of all output files.
+
+        :type input_file_location       str
+        :type header                    bool
+        :type terminate_at              int
+        :rtype                          list
         """
         # add one to break point if header is true
-        header_row = None
         if header:
             terminate_at += 1
 
+        header_row = None
+# TODO comment this method
+        # open csv for reading
         with open(input_file_location, 'r', newline="\n") as open_csv:
             address_csv = reader(open_csv)
             index = 0
 
             # do we have headers?
-            if header:
-                for row in address_csv:
+            for row in address_csv:
+                if index == 0 and header:
+                    header_row = row
                     index += 1
-                    # pick up header row
-                    if index == 1:
-                        header_row = row
-                        continue
+                    continue
 
-                    # create new address, with checking
-                    new_address = Address(row, header_row=header_row)
-                    # add new address
-                    self.add_address(new_address)
+                index += 1
 
-                    if index == terminate_at:
-                        break
-            else:
-                for row in address_csv:
-                    # increase index
-                    index += 1
-                    # create new address
-                    new_address = Address(row, header_row=None)
-                    # add new address
-                    self.add_address(new_address)
+                # create new address, with checking
+                new_address = Address(row, header_row=header_row)
+                # add new address
+                self.add_address(new_address)
 
-                    if index == terminate_at:
-                        break
+                if index == terminate_at:
+                    break
 
             # write any remaining files
             if len(self.collection) != 0:

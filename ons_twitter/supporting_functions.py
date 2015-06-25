@@ -7,6 +7,7 @@ Python version: 3.4
 
 from os import path, makedirs
 
+# TODO comment and optimise supporting functions
 
 def find_file_extension(file_name):
     """
