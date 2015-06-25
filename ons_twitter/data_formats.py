@@ -1,6 +1,6 @@
 """
-Description:    Supplementary Python file, containing file formats for Twitter -> MongoDB imports/exports.
-                Contains classes used in Twitter project.
+Description:    Class definition for the Tweet, Address and AddressBase objects used in the importing process.
+                Also contains functions for parsing invalid csv input row and latitude longitude conversion.
 Author:         Bence Komarniczky
 Date:           02/March/2015
 Python version: 3.4
@@ -10,9 +10,11 @@ from json import load, dump
 from csv import reader
 from datetime import datetime
 from os.path import isfile
+
 from bson.son import SON
 from osgeo import ogr, osr
 from pymongo.errors import OperationFailure
+
 from ons_twitter.supporting_functions import distance
 from ons_twitter.supporting_functions import create_folder
 
@@ -185,6 +187,7 @@ class Tweet(object):
         """
 
         from pprint import pprint
+
         pprint(self.dictionary)
 
     def generate_time_input(self):
@@ -273,104 +276,12 @@ class Tweet(object):
         return csv_row
 
 
-def lat_long_to_osgb(lat_long):
-    """
-    Convert latitude, longitude coordinates to UK easting, northing coordinates.
-
-    :param lat_long: List or tuple of latitude, longitude coordinates.
-    :return: List of easting (X), northing (Y) coordinates.
-    """
-    lat = lat_long[0]
-    lng = lat_long[1]
-    # Source is WSG84 (lat, lng) i.e. EPSG 4326:
-    source = osr.SpatialReference()
-    source.ImportFromEPSG(4326)
-    # Target is osgb i.e. EPSG 27700:
-    target = osr.SpatialReference()
-    target.ImportFromEPSG(27700)
-    # Prepare transformer
-    transform = osr.CoordinateTransformation(source, target)
-
-    # Create source point - coords are X, Y i.e. lng, lat:
-    point = ogr.Geometry(ogr.wkbPoint)
-    point.AddPoint(lng, lat)
-    # Now transform it to target coord system:
-    point.Transform(transform)
-
-    # Return point as an (X, Y) tuple i.e. (easting, northing):
-    return [int(point.GetX()), int(point.GetY())]
-
-
-def parse_wrong_data(data, debug=False):
-    """
-    Used for parsing incorrect csv data formats into correct list objects.
-    Some tweets contain "," in the place description or user name. This can cause the raw input list to be too long.
-    If the last object contains the tweet information and the list is longer then expected, then this function
-    will find the extra element and remove it from the list.
-    A new, cleaned data is returned.
-    Main goal is to keep Longitude/Latitude information intact.
-    :param data:    list resulting from csv reader - one row. User should check whether last element is non-empty. This
-                    indicates invalid row.
-    :param debug:   boolean for printing debugging information
-    :return:        cleaned data as as list of correct length (not guaranteed)
-    """
-
-    if debug:
-        print("\nInput:", data)
-    # country code should be in 6th place, everything after it should be computer generated
-    # separate data into 3 objects - before/new/after. New_data will contain problematic sections of input
-    country_index = data.index("GB")
-    before_new_data = data[:2]
-    new_data = data[2:(country_index - 1)]
-    after_new_data = data[(country_index - 1):]
-    # convert to string
-    string_data = ",".join(new_data)
-
-    # read json document
-    language_codes_json = load(open("ons_twitter/twitter_lang_codes.JSON"))
-    language_codes = []
-    for one_item in language_codes_json:
-        language_codes.append(one_item["code"])
-
-    # loop over all language codes from Twitter
-    for language in language_codes:
-        lang_index = string_data.find(language)
-        # if language code is found
-        if lang_index != -1:
-            if debug:
-                print(language, lang_index)
-
-            # separate at language code
-            first_half = string_data[0:lang_index].split(sep=",")
-            second_half = string_data[lang_index:].split(sep=",")
-
-            # reduce both list to their correct length
-            while len(first_half) > 1:
-                first_half.pop()
-            while len(second_half) > 2:
-                second_half.pop()
-
-            if debug:
-                print(first_half)
-                print(second_half)
-
-            # paste new_data back together and finish loop
-            new_data = first_half + second_half
-            break
-
-    # put data back together
-    data = before_new_data + new_data + after_new_data
-
-    if debug:
-        print("\n Final output:\n", data, "\n")
-    return data
-
-
 class Address():
     """
     Object of type Address corresponds to a singe data point of the UK address base.
     Most important part is a JSON object with all the info from the original csv file.
     """
+
     def __init__(self, data, header_row=None):
         """
         Supply a list or tuple of data points and a corresponding header file to insert data
@@ -545,3 +456,96 @@ class AddressBase():
                 self.write_to_json()
 
         return self.file_names
+
+
+def lat_long_to_osgb(lat_long):
+    """
+    Convert latitude, longitude coordinates to UK easting, northing coordinates.
+
+    :param lat_long: List or tuple of latitude, longitude coordinates.
+    :return: List of easting (X), northing (Y) coordinates.
+    """
+    lat = lat_long[0]
+    lng = lat_long[1]
+    # Source is WSG84 (lat, lng) i.e. EPSG 4326:
+    source = osr.SpatialReference()
+    source.ImportFromEPSG(4326)
+    # Target is osgb i.e. EPSG 27700:
+    target = osr.SpatialReference()
+    target.ImportFromEPSG(27700)
+    # Prepare transformer
+    transform = osr.CoordinateTransformation(source, target)
+
+    # Create source point - coords are X, Y i.e. lng, lat:
+    point = ogr.Geometry(ogr.wkbPoint)
+    point.AddPoint(lng, lat)
+    # Now transform it to target coord system:
+    point.Transform(transform)
+
+    # Return point as an (X, Y) tuple i.e. (easting, northing):
+    return [int(point.GetX()), int(point.GetY())]
+
+
+def parse_wrong_data(data, debug=False):
+    """
+    Used for parsing incorrect csv data formats into correct list objects.
+    Some tweets contain "," in the place description or user name. This can cause the raw input list to be too long.
+    If the last object contains the tweet information and the list is longer then expected, then this function
+    will find the extra element and remove it from the list.
+    A new, cleaned data is returned.
+    Main goal is to keep Longitude/Latitude information intact.
+    :param data:    list resulting from csv reader - one row. User should check whether last element is non-empty. This
+                    indicates invalid row.
+    :param debug:   boolean for printing debugging information
+    :return:        cleaned data as as list of correct length (not guaranteed)
+    """
+
+    if debug:
+        print("\nInput:", data)
+    # country code should be in 6th place, everything after it should be computer generated
+    # separate data into 3 objects - before/new/after. New_data will contain problematic sections of input
+    country_index = data.index("GB")
+    before_new_data = data[:2]
+    new_data = data[2:(country_index - 1)]
+    after_new_data = data[(country_index - 1):]
+    # convert to string
+    string_data = ",".join(new_data)
+
+    # read json document
+    language_codes_json = load(open("ons_twitter/twitter_lang_codes.JSON"))
+    language_codes = []
+    for one_item in language_codes_json:
+        language_codes.append(one_item["code"])
+
+    # loop over all language codes from Twitter
+    for language in language_codes:
+        lang_index = string_data.find(language)
+        # if language code is found
+        if lang_index != -1:
+            if debug:
+                print(language, lang_index)
+
+            # separate at language code
+            first_half = string_data[0:lang_index].split(sep=",")
+            second_half = string_data[lang_index:].split(sep=",")
+
+            # reduce both list to their correct length
+            while len(first_half) > 1:
+                first_half.pop()
+            while len(second_half) > 2:
+                second_half.pop()
+
+            if debug:
+                print(first_half)
+                print(second_half)
+
+            # paste new_data back together and finish loop
+            new_data = first_half + second_half
+            break
+
+    # put data back together
+    data = before_new_data + new_data + after_new_data
+
+    if debug:
+        print("\n Final output:\n", data, "\n")
+    return data
