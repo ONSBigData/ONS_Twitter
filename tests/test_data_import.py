@@ -37,10 +37,12 @@ if "import_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     twitter_mongo = (test_mongo[0], test_mongo[1], "csv_import")
     data_import.import_file("data/subset.csv",
                             mongo_connection=twitter_mongo,
-                            mongo_address=mongo_address)
+                            mongo_address=mongo_address,
+                            debug=True)
 
 if "dump_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     data_import.dump_errors(test_list, "test_csv", "hello/test/1.csv", test_output + "csv_dump/")
 
 if "dump_json" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     data_import.dump_errors(test_dict, "test_j", "hello/test/1.json", test_output + "csv_dump/")
+

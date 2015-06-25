@@ -55,12 +55,12 @@ def import_file(source,
 
     # if source is a single file then process simply
     if one_file:
-        aggregated_results = import_one_file(source,
-                                             mongo_connection=mongo_connection,
-                                             mongo_address=mongo_address,
-                                             header=header,
-                                             debug=debug,
-                                             print_progress=print_progress)
+        aggregated_results = import_one_csv(source,
+                                            mongo_connection=mongo_connection,
+                                            mongo_address=mongo_address,
+                                            header=header,
+                                            debug=debug,
+                                            print_progress=print_progress)
     else:
         # process contents of folder using joblib in parallel
 
@@ -69,13 +69,13 @@ def import_file(source,
 
         # decide on parallel mongodb lookup
         if type(mongo_address[0]) is str:
-            results = Parallel(n_jobs=-1)(delayed(import_one_file)(filename,
-                                                                   mongo_connection,
-                                                                   mongo_address,
-                                                                   header,
-                                                                   debug,
-                                                                   None,
-                                                                   print_progress) for filename in file_list)
+            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
+                                                                  mongo_connection,
+                                                                  mongo_address,
+                                                                  header,
+                                                                  debug,
+                                                                  None,
+                                                                  print_progress) for filename in file_list)
         else:
             # verbose
             print("\nMore than one address base were supplied!",
@@ -97,13 +97,13 @@ def import_file(source,
                 i += 1
 
             # call parallel
-            results = Parallel(n_jobs=-1)(delayed(import_one_file)(param[0],
-                                                                   mongo_connection,
-                                                                   param[1],
-                                                                   header,
-                                                                   debug,
-                                                                   None,
-                                                                   print_progress) for param in mongo_chunk_iter)
+            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(param[0],
+                                                                  mongo_connection,
+                                                                  param[1],
+                                                                  header,
+                                                                  debug,
+                                                                  None,
+                                                                  print_progress) for param in mongo_chunk_iter)
 
         # aggregate statistics
         aggregated_results = np.sum(results, axis=0)
@@ -123,41 +123,50 @@ def import_file(source,
     return aggregated_results
 
 
-def import_one_file(csv_file_name,
-                    mongo_connection=None,
-                    mongo_address=None,
-                    header=False,
-                    debug=False,
-                    debug_rows=None,
-                    print_progress=0):
+def import_one_csv(csv_file_name,
+                   mongo_connection=None,
+                   mongo_address=None,
+                   header=False,
+                   debug=False,
+                   debug_rows=None,
+                   print_progress=0):
     """
     Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base.
-    Invalid tweets will be filtered into a separate folder.
+    Invalid tweets will be filtered into a separate folder under "output/errors"
 
-    :param csv_file_name:       location on csv file containing tweets
-    :param mongo_connection:    list of mongodb database parameters (ip:host, database, collection) to
+    :param csv_file_name:       Location of csv file containing tweets to be imported.
+    :param mongo_connection:    List of mongodb database parameters (ip:host, database, collection) to
                                 the twitter database. Can also be a list of mongodb databases.
-    :param header:              if true, then csv files contain headers and these need to be skipped
-    :param mongo_address:       list of mongodb database parameters (ip:host, database, collection) to a geo_indexed
-                                mongodb address base
-    :param print_progress:      integer specifying the number of reads at which diagnostics should be
-                                printed. 0 will print no diagnostics
+    :param mongo_address:       List of mongodb database parameters (ip:host, database, collection) to a geo_indexed
+                                mongodb address base.
+    :param header:              If true, then csv files contain headers and these need to be skipped.
+    :param debug:               If true debug statements will be printed.
+    :param debug_rows:          How many rows it shall do for debugging purposes. If not specified and debug is True
+                                then will be set to 5
+    :param print_progress:      Number of reads at which diagnostics should be printed. 0 will print no diagnostics.
     :return:                    numpy array with number of
                                 inserted, no_geo, non_GB, failed, converted, no_address, duplicate, mongo_error tweets
+
+    :type csv_file_name         str
+    :type mongo_connection      list or tuple
+    :type mongo_address         list or tuple
+    :type header                bool
+    :type debug                 bool
+    :type debug_rows            None or int
+    :type print_progress        int
+    :rtype                      np.ndarray
     """
-    # set up debug if necessary
+
+    # set up debug_rows if specified
     if debug and debug_rows is None:
         debug_rows = 5
 
-    # TODO implement json imports
-
-    # convert list of mongo connection parameters into mongo connections
+    # establish mongodb connections
     mongo_connection = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
     mongo_address = pymongo.MongoClient(mongo_address[0])[mongo_address[1]][mongo_address[2]]
 
     # start reading csv file
     with open(csv_file_name, 'r') as in_tweets:
-        # set up csv reader
         input_rows = reader(in_tweets, delimiter=",")
 
         # start indexing, initiate lists for collecting tweets
@@ -172,6 +181,8 @@ def import_one_file(csv_file_name,
 
         # iterate over each row of input csv
         for row in input_rows:
+
+            # handle header row
             if header and index == 0:
                 header_row = row
                 if debug:
@@ -180,57 +191,59 @@ def import_one_file(csv_file_name,
                     print("\n ***")
                 index += 1
                 continue
+
+            # read file row by row
+            index += 1
+            new_tweet = Tweet(row, method="csv")
+
+            if debug:
+                # print tweet before finding address
+                print("\n\n **** Tweet read in ")
+                new_tweet.get_info()
+                if index == debug_rows + 1:
+                    break
+            if debug_rows is not None:
+                if index == debug_rows + 1:
+                    break
+
+            # check if any errors occurred
+            if new_tweet.get_errors() in (1, 3):
+                # save raw input in no_geo
+                no_geo.append(row)
+            elif new_tweet.get_errors() == -1:
+                # save raw input in failed_tweets
+                failed_tweets.append(row)
+            elif new_tweet.get_country_code() != "GB":
+                # save raw input in non_GB
+                non_gb.append(row)
             else:
-                index += 1
-                new_tweet = Tweet(row, method="csv")
+                # if all is good then find closest address
+                found_address = new_tweet.find_tweet_address(mongo_address)
 
+                # if there are no address then keep track of raw input
+                if found_address == 1:
+                    no_address.append(row)
+                elif found_address == 2:
+                    # if there was a mongo error then do not add to database
+                    mongo_error.append(row)
+                    continue
+
+                # separate tweet into different category if columns have been moved successfully
+                if new_tweet.get_errors() == 2:
+                    converted_no_geo.append(row)
+
+                # print debug info
                 if debug:
-                    # print tweet before finding address
-                    print("\n\n **** Tweet read in ")
+                    print("\n\n *** Tweet after address matching!", found_address)
                     new_tweet.get_info()
-                    if index == debug_rows:
-                        break
-                if debug_rows is not None:
-                    if index == debug_rows + 1:
-                        break
 
-                # check if any errors occurred
-                if new_tweet.get_errors() in (1, 3):
-                    # change this to csv output
-                    no_geo.append(row)
-                elif new_tweet.get_errors() == -1:
-                    # change this to csv output
-                    failed_tweets.append(row)
-                elif new_tweet.get_country_code() != "GB":
-                    non_gb.append(row)
-                else:
-                    # if all is good then find closest address
-                    found_address = new_tweet.find_tweet_address(mongo_address)
+                # add tweet to final list
+                read_tweets.append(new_tweet)
 
-                    # if there are no address then keep track of it
-                    if found_address == 1:
-                        no_address.append(row)
-                    elif found_address == 2:
-                        # if there was a mongo error then do not add to database
-                        mongo_error.append(row)
-                        continue
-
-                    # separate tweet into different category if columns have been moved successfully
-                    if new_tweet.get_errors() == 2:
-                        converted_no_geo.append(row)
-
-                    # print debug info
-                    if debug:
-                        print("\n\n *** Tweet after address matching!", found_address)
-                        new_tweet.get_info()
-
-                    # add tweet to final list
-                    read_tweets.append(new_tweet)
-
-                # print progress if needed
-                if print_progress > 0:
-                    if index % print_progress == 0:
-                        print(index, datetime.now())
+            # print progress if needed
+            if print_progress > 0:
+                if index % print_progress == 0:
+                    print(index, datetime.now())
 
     # write failed tweets if any
     dump_errors(failed_tweets, "failed_tweets", csv_file_name)
@@ -261,6 +274,164 @@ def import_one_file(csv_file_name,
     # dump all duplicate tweets
     dump_errors(duplicates, "duplicates", csv_file_name)
     print("Finished", csv_file_name, datetime.now())
+
+    # return insert statistics
+    return np.array([len(read_tweets) - len(duplicates), len(no_geo),
+                     len(non_gb), len(failed_tweets),
+                     len(converted_no_geo), len(no_address), len(duplicates), len(mongo_error)], dtype="int32")
+
+
+def import_one_json(json_file_name,
+                    mongo_connection=None,
+                    mongo_address=None,
+                    header=False,
+                    debug=False,
+                    debug_rows=None,
+                    print_progress=0):
+    """
+    Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base.
+    Invalid tweets will be filtered into a separate folder under "output/errors"
+
+    :param json_file_name:      Location of csv file containing tweets to be imported.
+    :param mongo_connection:    List of mongodb database parameters (ip:host, database, collection) to
+                                the twitter database. Can also be a list of mongodb databases.
+    :param mongo_address:       List of mongodb database parameters (ip:host, database, collection) to a geo_indexed
+                                mongodb address base.
+    :param header:              If true, then csv files contain headers and these need to be skipped.
+    :param debug:               If true debug statements will be printed.
+    :param debug_rows:          How many rows it shall do for debugging purposes. If not specified and debug is True
+                                then will be set to 5
+    :param print_progress:      Number of reads at which diagnostics should be printed. 0 will print no diagnostics.
+    :return:                    numpy array with number of
+                                inserted, no_geo, non_GB, failed, converted, no_address, duplicate, mongo_error tweets
+
+    :type json_file_name        str
+    :type mongo_connection      list or tuple
+    :type mongo_address         list or tuple
+    :type header                bool
+    :type debug                 bool
+    :type debug_rows            None or int
+    :type print_progress        int
+    :rtype                      np.ndarray
+    """
+
+    # set up debug_rows if specified
+    if debug and debug_rows is None:
+        debug_rows = 5
+
+    # establish mongodb connections
+    mongo_connection = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
+    mongo_address = pymongo.MongoClient(mongo_address[0])[mongo_address[1]][mongo_address[2]]
+
+    # start reading csv file
+    with open(json_file_name, 'r') as in_tweets:
+        input_rows = reader(in_tweets, delimiter=",")
+
+        # start indexing, initiate lists for collecting tweets
+        index = 0
+        read_tweets = []
+        no_geo = []
+        converted_no_geo = []
+        failed_tweets = []
+        non_gb = []
+        no_address = []
+        mongo_error = []
+
+        # iterate over each row of input csv
+        for row in input_rows:
+
+            # handle header row
+            if header and index == 0:
+                header_row = row
+                if debug:
+                    print("\nHeader row: ")
+                    print(header_row)
+                    print("\n ***")
+                index += 1
+                continue
+
+            # read file row by row
+            index += 1
+            new_tweet = Tweet(row, method="csv")
+
+            if debug:
+                # print tweet before finding address
+                print("\n\n **** Tweet read in ")
+                new_tweet.get_info()
+                if index == debug_rows + 1:
+                    break
+            if debug_rows is not None:
+                if index == debug_rows + 1:
+                    break
+
+            # check if any errors occurred
+            if new_tweet.get_errors() in (1, 3):
+                # save raw input in no_geo
+                no_geo.append(row)
+            elif new_tweet.get_errors() == -1:
+                # save raw input in failed_tweets
+                failed_tweets.append(row)
+            elif new_tweet.get_country_code() != "GB":
+                # save raw input in non_GB
+                non_gb.append(row)
+            else:
+                # if all is good then find closest address
+                found_address = new_tweet.find_tweet_address(mongo_address)
+
+                # if there are no address then keep track of raw input
+                if found_address == 1:
+                    no_address.append(row)
+                elif found_address == 2:
+                    # if there was a mongo error then do not add to database
+                    mongo_error.append(row)
+                    continue
+
+                # separate tweet into different category if columns have been moved successfully
+                if new_tweet.get_errors() == 2:
+                    converted_no_geo.append(row)
+
+                # print debug info
+                if debug:
+                    print("\n\n *** Tweet after address matching!", found_address)
+                    new_tweet.get_info()
+
+                # add tweet to final list
+                read_tweets.append(new_tweet)
+
+            # print progress if needed
+            if print_progress > 0:
+                if index % print_progress == 0:
+                    print(index, datetime.now())
+
+    # write failed tweets if any
+    dump_errors(failed_tweets, "failed_tweets", json_file_name)
+
+    # dump non-geo located tweets if any
+    dump_errors(no_geo, "no_geo", json_file_name)
+
+    # dump all non GB tweets
+    dump_errors(non_gb, "non_GB", json_file_name)
+
+    # dump successfully converted non_GBs. These will still be processed!
+    dump_errors(converted_no_geo, "successful_non_geo", json_file_name)
+
+    # dump no address tweets. Will still go into pipeline!
+    dump_errors(no_address, "no_address_found", json_file_name)
+
+    # dump mongo errors, won't be in database
+    dump_errors(mongo_error, "mongo_error", json_file_name)
+
+    # put correct tweets into specified mongo_db database
+    duplicates = []
+    for tweet in read_tweets:
+        try:
+            mongo_connection.insert(tweet.dictionary)
+        except DuplicateKeyError:
+            duplicates.append(tweet.get_csv_format())
+
+    # dump all duplicate tweets
+    dump_errors(duplicates, "duplicates", json_file_name)
+    print("Finished", json_file_name, datetime.now())
 
     # return insert statistics
     return np.array([len(read_tweets) - len(duplicates), len(no_geo),
@@ -329,7 +500,6 @@ def create_partition_csv(input_csv,
 
             # if chunk limit is reached then split out new csv
             if (index % chunk_size == 0) and do_chunks:
-
                 # create new name for csv
                 output_csv_name = "%s%s_%06d.csv" % (output_csv, find_file_name(input_csv)[1][:-4], chunk_index)
 

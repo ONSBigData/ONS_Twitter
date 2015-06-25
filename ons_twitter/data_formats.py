@@ -121,7 +121,44 @@ class Tweet(object):
             self.dictionary["_id"] = str(self.dictionary["user_id"]) + "_" + str(self.dictionary["unix_time"])
 
         elif method == "json":
-            pass
+            self.dictionary = empty_dictionary
+
+            # check if info is in dictionary, this indicates that this is only the end of file twitter API info
+            if "info" in data.keys():
+                self.error_number = 5
+            else:
+
+                # expect the current 2014-15 Twitter API json structure
+                try:
+                    self.dictionary["user_id"] = int(float(data["user"]["id"]))
+                    self.dictionary["unix_time"] = int(float(data["timestamp_ms"])) // 1000
+                    self.dictionary["tweet"]["user_name"] = data["user"]["name"]
+                    self.dictionary["tweet"]["language"] = data["lang"]
+                    self.dictionary["tweet"]["location"] = data["user"]["location"]
+                    self.dictionary["tweet"]["place"] = data["place"]["name"]
+                    self.dictionary["tweet"]["country"] = data["place"]["country_code"]
+                    self.dictionary["tweet"]["text"] = data["text"].replace('"', "")
+                    self.dictionary["chunk_id"] = self.dictionary["user_id"] % 1000
+                except ValueError:
+                    self.error_number = -1
+                    self.error_description.append("Invalid data supplied:    " + ",".join(data))
+
+                # handle missing coordinates
+                try:
+                    self.dictionary["tweet"]["lat_long"] = data["geo"]["coordinates"]
+                    self.dictionary["tweet"]["coordinates"] = lat_long_to_osgb(
+                        self.dictionary["tweet"]["lat_long"])
+                except ValueError or KeyError:
+                    self.dictionary["tweet"]["lat_long"] = ("NA", "NA")
+                    self.dictionary["tweet"]["coordinates"] = ("NA", "NA")
+                    self.error_number = 1
+                    self.error_description.append("Invalid lat_long coordinates supplied:")
+                    self.error_description.append(data)
+
+                # add time variables
+                self.generate_time_input()
+                self.dictionary["_id"] = str(self.dictionary["user_id"]) + "_" + str(self.dictionary["unix_time"])
+
         else:
             print("Invalid method supplied to Tweet class!")
 
@@ -134,6 +171,7 @@ class Tweet(object):
                             1 = "no geo-location",
                             2 = "Wrong lat-long but conversion was successful",
                             3 = "Wrong lat-long and conversion was NOT successful",
+                            5 = "End of file of GNIP output",
                             -1 = "Any other error"
         """
 
