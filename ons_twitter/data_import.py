@@ -9,12 +9,11 @@ Python version: 3.4
 from os import listdir, system
 from csv import reader, writer, QUOTE_NONNUMERIC
 from datetime import datetime
-from json import dump, loads, load
+from json import dump, loads
 from pymongo.errors import DuplicateKeyError
 import pymongo
 import numpy as np
 from joblib import Parallel, delayed
-
 from ons_twitter.data_formats import Tweet
 from ons_twitter.supporting_functions import *
 
@@ -44,37 +43,37 @@ def import_file(source,
     start_time = datetime.now()
 
     # check if source is a directory or file
-    csv_list = []
+    file_list_end = []
     try:
         # grab filename list
-        csv_list = listdir(source)
+        file_list_end = listdir(source)
         one_file = False
     except NotADirectoryError:
         one_file = True
 
     # if source is a single file then process simply
     if one_file:
-        aggregated_results = import_one_csv(source,
-                                            mongo_connection=mongo_connection,
-                                            mongo_address=mongo_address,
-                                            header=header,
-                                            debug=debug,
-                                            print_progress=print_progress)
+        aggregated_results = import_one_file(source,
+                                             mongo_connection=mongo_connection,
+                                             mongo_address=mongo_address,
+                                             header=header,
+                                             debug=debug,
+                                             print_progress=print_progress)
     else:
         # process contents of folder using joblib in parallel
 
         # generate filename list
-        file_list = [(source + "/" + x) for x in csv_list]
+        file_list = [(source + "/" + x) for x in file_list_end]
 
         # decide on parallel mongodb lookup
         if type(mongo_address[0]) is str:
-            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(filename,
-                                                                  mongo_connection,
-                                                                  mongo_address,
-                                                                  header,
-                                                                  debug,
-                                                                  None,
-                                                                  print_progress) for filename in file_list)
+            results = Parallel(n_jobs=-1)(delayed(import_one_file)(filename,
+                                                                   mongo_connection,
+                                                                   mongo_address,
+                                                                   header,
+                                                                   debug,
+                                                                   None,
+                                                                   print_progress) for filename in file_list)
         else:
             # verbose
             print("\nMore than one address base were supplied!",
@@ -96,13 +95,13 @@ def import_file(source,
                 i += 1
 
             # call parallel
-            results = Parallel(n_jobs=-1)(delayed(import_one_csv)(param[0],
-                                                                  mongo_connection,
-                                                                  param[1],
-                                                                  header,
-                                                                  debug,
-                                                                  None,
-                                                                  print_progress) for param in mongo_chunk_iter)
+            results = Parallel(n_jobs=-1)(delayed(import_one_file)(param[0],
+                                                                   mongo_connection,
+                                                                   param[1],
+                                                                   header,
+                                                                   debug,
+                                                                   None,
+                                                                   print_progress) for param in mongo_chunk_iter)
 
         # aggregate statistics
         aggregated_results = np.sum(results, axis=0)
@@ -120,6 +119,51 @@ def import_file(source,
           "\n *****")
 
     return aggregated_results
+
+
+def import_one_file(file_name,
+                    mongo_connection=None,
+                    mongo_address=None,
+                    header=False,
+                    debug=False,
+                    debug_rows=None,
+                    print_progress=0):
+    """
+    Wrapper function for import_one_csv and import_one_json. Picks up file extension and decides
+    which function to use. For parameters see any of the two functions.
+
+    :type file_name             str
+    :type mongo_connection      list or tuple
+    :type mongo_address         list or tuple
+    :type header                bool
+    :type debug                 bool
+    :type debug_rows            None or int
+    :type print_progress        int
+    :rtype                      np.ndarray
+    """
+
+    # grab file extension
+    file_end = find_file_extension(file_name).lower()
+
+    # import file using one the appropriate method
+    if file_end == ".json":
+        return import_one_json(file_name,
+                               mongo_connection,
+                               mongo_address,
+                               debug=debug,
+                               debug_rows=debug_rows,
+                               print_progress=print_progress)
+    elif file_end == ".csv":
+        return import_one_csv(file_name,
+                              mongo_connection,
+                              mongo_address,
+                              header=header,
+                              debug=debug,
+                              debug_rows=debug_rows,
+                              print_progress=print_progress)
+    else:
+        print("File extension is invalid, skipping %s" % file_name)
+        return np.zeros(8, dtype="int")
 
 
 def import_one_csv(csv_file_name,
@@ -283,7 +327,6 @@ def import_one_csv(csv_file_name,
 def import_one_json(json_file_name,
                     mongo_connection=None,
                     mongo_address=None,
-                    header=False,
                     debug=False,
                     debug_rows=None,
                     print_progress=0):
@@ -291,12 +334,12 @@ def import_one_json(json_file_name,
     Import one csv file of tweets into a mongodb database while looking up addresses from a mongodb address base.
     Invalid tweets will be filtered into a separate folder under "output/errors"
 
-    :param json_file_name:      Location of csv file containing tweets to be imported.
+    :param json_file_name:      Location of json file containing tweets to be imported. Should be one tweet per line
+                                as provided by GNIP.
     :param mongo_connection:    List of mongodb database parameters (ip:host, database, collection) to
                                 the twitter database. Can also be a list of mongodb databases.
     :param mongo_address:       List of mongodb database parameters (ip:host, database, collection) to a geo_indexed
                                 mongodb address base.
-    :param header:              If true, then csv files contain headers and these need to be skipped.
     :param debug:               If true debug statements will be printed.
     :param debug_rows:          How many rows it shall do for debugging purposes. If not specified and debug is True
                                 then will be set to 5
@@ -307,7 +350,6 @@ def import_one_json(json_file_name,
     :type json_file_name        str
     :type mongo_connection      list or tuple
     :type mongo_address         list or tuple
-    :type header                bool
     :type debug                 bool
     :type debug_rows            None or int
     :type print_progress        int
@@ -334,6 +376,7 @@ def import_one_json(json_file_name,
         non_gb = []
         no_address = []
         mongo_error = []
+        end_of_file = []
 
         for one_row in in_tweets:
             # skip empty rows
@@ -361,6 +404,7 @@ def import_one_json(json_file_name,
                 # save raw input in no_geo
                 no_geo.append(row)
             elif new_tweet.get_errors() == 5:
+                end_of_file.append(row)
                 index -= 1
                 continue
             elif new_tweet.get_errors() == -1:
@@ -403,6 +447,9 @@ def import_one_json(json_file_name,
 
     # dump non-geo located tweets if any
     dump_errors(no_geo, "no_geo", json_file_name)
+
+    # dump end of file errors if any
+    dump_errors(end_of_file, "eof", json_file_name)
 
     # dump all non GB tweets
     dump_errors(non_gb, "non_GB", json_file_name)

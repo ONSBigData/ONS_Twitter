@@ -8,7 +8,7 @@ Python version: 3.4
 import ons_twitter.data_import as data_import
 
 
-RUN_THESE_TESTS = {"import_json"}
+RUN_THESE_TESTS = {"import_json", "import_csv"}
 mongo_address = ("192.168.0.98:30001", "twitter", "address")
 test_mongo = ("127.0.0.1:27017", "lib_test")
 
@@ -31,20 +31,19 @@ test_dict = [{"north": 1.22, "east": 2.3, "name": "Lebron James"},
 # with open(test_json_path, encoding="utf8") as in_json:
 # for line in in_json:
 # if line != "\n":
-#             print(json.loads(line))
+# print(json.loads(line))
 
 if "import_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     twitter_mongo = (test_mongo[0], test_mongo[1], "csv_import")
     data_import.import_file("data/subset.csv",
                             mongo_connection=twitter_mongo,
-                            mongo_address=mongo_address,
-                            debug=True)
+                            mongo_address=mongo_address)
 
 if "import_json" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     twitter_mongo = (test_mongo[0], test_mongo[1], "json_import")
-    data_import.import_one_json("data/5minute.json",
-                                mongo_connection=twitter_mongo,
-                                mongo_address=mongo_address)
+    data_import.import_file("data/5minute.json",
+                            mongo_connection=twitter_mongo,
+                            mongo_address=mongo_address)
 
 if "dump_csv" in RUN_THESE_TESTS or "all" in RUN_THESE_TESTS:
     data_import.dump_errors(test_list, "test_csv", "hello/test/1.csv", test_output + "csv_dump/")
