@@ -1,5 +1,5 @@
 """
-Description:    Code for the DBScan clustering algorithm.
+Description:    Carry out naive DBScan clustering of the Twitter database on a per-user basis.
 Author:         Bence Komarniczky
 Date:           09/03/2015
 Python version: 3.4
@@ -8,6 +8,7 @@ Python version: 3.4
 from datetime import datetime
 import time
 import csv
+
 import numpy as np
 from bson.son import SON
 from pymongo.errors import OperationFailure, ConnectionFailure, AutoReconnect
@@ -17,18 +18,27 @@ from joblib import Parallel, delayed
 from ons_twitter.supporting_functions import distance as simple_distance
 
 
-def create_dictionary_for_chunk(mongo_connection, chunk_id):
+def create_dictionary_for_chunk(mongo_connection,
+                                chunk_id):
     """
-    Takes a mongo_db connection and a chunk_id as from the twitted mongodb database. Returns a dictionary,
-    where each key is a user_id and each value is the list of all tweets from that user.
+    For a given mongodb parameter tuple and a chunk_id returns all the tweets in that chunk as a dictionary.
+    User_id: [tweets]
 
     :param mongo_connection:    List of mongodb connection parameters to twitter database. [ip, database, collection]
-    :param chunk_id:        Number of chunk to process. 0-999
-    :return:                Dictionary with user_id: [tweets]
+    :param chunk_id:            Number of chunk to process. 0-999
+    :return:                    Dictionary with {user_id: [tweets]}
+
+    :type mongo_connection      list[string] | tuple[string]
+    :type chunk_id              int
+    :rtype                      dict[int, list[]]
     """
 
     # initiate dictionary
     tweets_by_user = {}
+
+    """
+    The below is a very crude implementation of a retry-on-error system.
+    """
 
     try:
         # set up query
@@ -83,14 +93,19 @@ def create_dictionary_for_chunk(mongo_connection, chunk_id):
     return tweets_by_user
 
 
-def _euclidean_distances_matrix(vector1, vector2):
+def _euclidean_distances_matrix(vector1,
+                                vector2):
     """
     Takes two complex vectors and returns a euclidean distance matrix.
     Input should be A[j] = x[j] + i*y[j]
 
-    :param vector1: Complex numpy vector
-    :param vector2: Complex numpy vector
-    :return:        Euclidean distance matrix
+    :param vector1: Long vector of complex coordinates.
+    :param vector2: Long vector of complex coordinates.
+    :return:        Euclidean distance matrix.
+
+    :type vector1   numpy.ndarray
+    :type vector2   numpy.ndarray
+    :rtype          numpy.ndarray
     """
 
     # get two matrices with all possible point combinations
@@ -105,15 +120,20 @@ def _euclidean_distances_matrix(vector1, vector2):
     return distance_array_integer
 
 
-def distance_matrix(point_list, block_size=1000):
+def distance_matrix(point_list,
+                    block_size=1000):
     """
     For a given list of input points (Tweets) returns the distance matrix. Uses numpy arrays and complex numbers.
     In order to fit into memory, there is a block_size parameter that breaks up the computation into chunks.
     With block_size= 1000, it can process 21,000 tweets within 22 seconds, using approximately 7Gb ram.
 
-    :param point_list: _id, user_id, coordinates tuples
-    :param block_size: break point for chunks, tweets over this size will be processed in chunks.
-    :return:    numpy array of distance matrix
+    :param point_list:      _id, user_id, coordinates tuples
+    :param block_size:      Break point for chunks, tweets over this size will be processed in chunks.
+    :return:                numpy array of distance matrix
+
+    :type point_list        list[tuple[]]
+    :type block_size        int
+    :rtype                  numpy.ndarray
     """
 
     # create numpy array from input points
@@ -122,7 +142,7 @@ def distance_matrix(point_list, block_size=1000):
     # count the size of input
     n = len(point_list)
 
-    # do blocks/don't do blocks
+    # do blocks if size if big enough
     if n < block_size:
 
         # simply calculate distance
@@ -145,18 +165,34 @@ def distance_matrix(point_list, block_size=1000):
     return distance_array_integer
 
 
-def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20, graphical_debug=False):
+def create_one_cluster(cluster_points,
+                       remaining_mask,
+                       distance_array,
+                       eps=20,
+                       graphical_debug=False):
     """
-    Create one new cluster for the user and return the remaining points.
+    Create one new cluster for the user and return both the new cluster and a mask for the remaining points.
+    This uses the DBScan algorithm where the required connections for a new cluster is 1.
 
-    :param cluster_points:  list of cluster points, as supplied to the distance_matrix function
-    :param remaining_mask:  list of a list and a numpy array. First list indicates the available row positions,
-                            that have not been searched before. An updated version of this will be returned.
+    :param cluster_points:  List of cluster points, as supplied to the distance_matrix function
+    :param remaining_mask:  List of a list and a numpy array. First list indicates the available row positions,
+                            that have not been searched before. An updated version of this will be returned,
+                            with the new mask.
     :param distance_array:  numpy integer array of approximated euclidean distances, output of distance matrix
                             function.
-    :param eps:             distance parameter for dbscan algorithm
-    :return: new_cluster:   list of all points from cluster_points, belonging to the new cluster
-    :return: remaining_mask:updated remaining mask, None if user's tweets have been exhausted
+    :param eps:             Distance parameter for DBScan algorithm
+    :param graphical_debug  If true then matplotlib is used to print the resulting cluster for debugging.
+
+    :return: new_cluster:   List of all points from cluster_points, belonging to the new cluster.
+    :return: remaining_mask:Updated remaining mask, None if user's tweets have been exhausted.
+
+    :type cluster_points    list[tuple]
+    :type remaining_mask    list[list[], numpy.ndarray]
+    :type distance_array    numpy.ndarray
+    :type eps               int | float
+    :type graphical_debug   bool
+
+    :rtype                  tuple[list[], list[]]
     """
 
     # check if any mask remains
@@ -224,23 +260,38 @@ def create_one_cluster(cluster_points, remaining_mask, distance_array, eps=20, g
     return new_cluster, remaining_mask
 
 
-def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_points=3):
+def create_cluster_info(complete_cluster,
+                        cluster_name,
+                        mongo_address_list,
+                        min_points=3):
     """
-    Returns more information for the cluster. Mean of distances, maximum distance, standard deviation of distances
+    Return more information for the cluster. Mean of distances, maximum distance, standard deviation of distances
     from cluster centroid.
 
-    :param complete_cluster:        list of all points in completed cluster
-    :param cluster_name:            name to include in cluster_id
-    :param mongo_address_list:           pymongo connection to geo_indexed address base [ip, database, collection]
-    :param min_points:              number of points in cluster for cluster classification
-    :return:                        json formatted dictionary for mongodb twitter["cluster"] insert
+    :param complete_cluster:        All points in completed cluster.
+    :param cluster_name:            Name to include in cluster_id.
+    :param mongo_address_list:      Pymongo connection parameters to geo_indexed address base
+                                    [ip, database, collection].
+    :param min_points:              Number of points in cluster for cluster classification.
+                                    If more than this points are in a cluster then call it cluster,
+                                    otherwise call it noise.
+
+    :return:                        Json formatted dictionary for mongodb twitter["cluster"] insert and
+                                    a list of distances from centroid for each point.
+
+    :type complete_cluster          list[tuple[]]
+    :type cluster_name              str
+    :type mongo_address_list        list[tuple[]] | list[list[]]
+    :type min_points                int
+
+    :rtype                          tuple[dict, list]
     """
     # convert cluster name to string in case of numeric input
     cluster_name = str(cluster_name)
 
     # get coordinates and mean centroid coordinates
     coordinate_points = np.array([one_tweet[2] for one_tweet in complete_cluster])
-    cluster_centroid = np.array([one_tweet[2] for one_tweet in complete_cluster]).mean(0)
+    cluster_centroid = coordinate_points.mean(0)
 
     # convert to complex numbers for easier calculations
     complex_coordinates = 1j * coordinate_points[..., 1] + coordinate_points[..., 0]
@@ -249,7 +300,7 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     # calculate all the distances
     distances = _euclidean_distances_matrix(complex_coordinates, complex_centroid)
 
-    # start dictionary
+    # start building final dictionary, these parts are same for all tweets
     cluster_info = {
         "count": len(complete_cluster),
         "centroid_coordinates": [int(cluster_centroid[0]),
@@ -271,16 +322,18 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     place = "MISSING"
     cluster_info["address"] = "NA"
 
+    mongo_address = None
+
     # find closest address
     if cluster_info["type"] == "cluster":
-        # create pymongo connection
+        # create pymongo connection with automatic retries
         try:
             mongo_address = pymongo.MongoClient(host=mongo_address_list[0], w=0)[mongo_address_list[1]][
                 mongo_address_list[2]]
         except ConnectionFailure:
             for x in range(5):
                 try:
-                    print("server is busy", mongo_address_list, " retry: ", x)
+                    print("server is busy %s retry number: %d" % (mongo_address_list, x))
                     time.sleep(1)
                     mongo_address = pymongo.MongoClient(host=mongo_address_list[0], w=0)[mongo_address_list[1]][
                         mongo_address_list[2]]
@@ -288,6 +341,8 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
 
                 except ConnectionFailure:
                     pass
+
+        assert mongo_address is not None, "Connection to address base failed after 5 retries: %s" % mongo_address_list
 
         query = {"coordinates": SON([("$near", (float(cluster_centroid[0]), float(cluster_centroid[1]))),
                                      ("$maxDistance", 300)])}
@@ -329,13 +384,13 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
                     break
 
                 except OperationFailure:
-                    print("No address base available!")
+                    print("No address base available!: %s" % mongo_address_list)
                     cluster_info["address"] = "NA"
                     place = "FAILURE"
                     break
 
                 except AutoReconnect:
-                    print("Try failed:", x)
+                    print("Try failed: %d" % x)
                     continue
     else:
         cluster_info["address"] = "NA_noise"
@@ -346,14 +401,19 @@ def create_cluster_info(complete_cluster, cluster_name, mongo_address_list, min_
     return cluster_info, list(distances[0])
 
 
-def cluster_one_user(user_id, tweets_by_user, mongo_address, eps=20, min_points=3,
-                     debug=False, graph_debug=False, robot_threshold=30000):
+def cluster_one_user(user_id,
+                     tweets_by_user,
+                     mongo_address,
+                     eps=20,
+                     min_points=3,
+                     debug=False,
+                     graph_debug=False,
+                     robot_threshold=30000):
     """
     Cluster all the tweets of one user from a twitter dictionary.
 
     :param user_id:         integer for twitter user_id
     :param tweets_by_user:  a dictionary of user/list of tweets pairs. Output of create_dictionary_for_chunk
-    :param destination:     "json" or a mongodb connection if tweets to be updated there
     :param mongo_address:   pymongo connection to an address base
     :param eps:             distance parameter for mongodb
     :param min_points:      minimum number of points in a valid cluster
@@ -424,8 +484,13 @@ def cluster_one_user(user_id, tweets_by_user, mongo_address, eps=20, min_points=
     return mongo_updates
 
 
-def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, debug_user=-1,
-                      graph_debug=False, return_csv=False):
+def cluster_one_chunk(mongo_connection,
+                      mongo_address,
+                      chunk_id,
+                      debug=False,
+                      debug_user=-1,
+                      graph_debug=False,
+                      return_csv=False):
     """
     Cluster all the tweets for one chunk.
 
@@ -497,14 +562,21 @@ def cluster_one_chunk(mongo_connection, mongo_address, chunk_id, debug=False, de
     return len(tweets_by_user_dict)
 
 
-def cluster_all(mongo_connection, mongo_address, chunk_range=range(1000),
-                parallel=True, debug=False, num_cores=-1):
+def cluster_all(mongo_connection,
+                mongo_address,
+                chunk_range=range(1000),
+                parallel=True,
+                debug=False,
+                num_cores=-1):
     """
     Cluster all tweets found in collection.
     :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
     :param mongo_address:       List of mongo parameters to address_base. [ip, database, collection]
     :param chunk_range:         Optional range for chunk ids to cluster.
     :return:                    Number of users clustered.
+
+    :type mongo_address         list | tuple
+    :type mongo_connection      list | tuple
     """
 
     # decide on parallel mongodb lookup

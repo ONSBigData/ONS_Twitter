@@ -82,8 +82,8 @@ def distance(point1, point2):
     :param point2:  Second point of coordinates.
     :return:        Distance in meters.
 
-    :type point1    tuple[float] | list[float]
-    :type point2    tuple[float] | list[float]
+    :type point1    tuple[float] | list[float] | numpy.ndarray
+    :type point2    tuple[float] | list[float] | numpy.ndarray
     :rtype          float
     """
 
