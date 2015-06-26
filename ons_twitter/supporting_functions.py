@@ -35,12 +35,17 @@ def find_file_extension(file_name):
 def find_file_name(file_name):
     """
     Find the containing folder and the file name from an input string.
-    :param file_name: String pointing to file.
-    :return: Tuple of (folder, file)
+    Return a tuple of (folder_name/, file_name)
     Example: data/input/test.csv -> data/input/, test.csv
+
+
+    :param file_name:   Full file name.
+    :return:            Tuple of folder path and filename.
+
+    :type file_name     str
+    :rtype              tuple
     """
 
-    #TODO continue from here
     # set start index so that if no extension is found then return the whole filename
     start_index = 0
 
@@ -54,21 +59,32 @@ def find_file_name(file_name):
 
 def create_folder(folder_loc):
     """
-    Create folder in system recursively. i.e. create one if one doesn't exist
-    :param folder_loc: String pointing to the location of new folder.
-    :return:
+    Create folder if it doesn't exist.
+
+    :param folder_loc:  Location of folder
+    :return:            None
+
+    :type folder_loc    str
+    :rtype              None
     """
+
     if not path.exists(folder_loc):
             makedirs(folder_loc)
 
+    return None
 
-def distance(point1,
-             point2):
+
+def distance(point1, point2):
     """
-    Given two tuples or lists, returns the distance between the two points, rounded to 3 decimal places.
-    :param point1: First point of coordinates. (Tuple/list)
-    :param point2: Second point of coordinates. (Tuple/list)
-    :return: float
+    Given two tuples or lists, return the distance between the two points,
+    rounded to 3 decimal places. Using easting,northing pairs it returns distance in meters.
+    :param point1:  First point of coordinates.
+    :param point2:  Second point of coordinates.
+    :return:        Distance in meters.
+
+    :type point1    tuple[float] | list[float]
+    :type point2    tuple[float] | list[float]
+    :rtype          float
     """
 
     euclidean_squared = ((point1[0] - point2[0]) ** 2) + ((point1[1] - point2[1]) ** 2)
