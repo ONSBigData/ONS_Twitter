@@ -473,27 +473,27 @@ class AddressBase(object):
         if header:
             terminate_at += 1
 
+        # initialise header row
         header_row = None
-# TODO comment this method
+
         # open csv for reading
         with open(input_file_location, 'r', newline="\n") as open_csv:
             address_csv = reader(open_csv)
             index = 0
 
-            # do we have headers?
+            # check for header row
             for row in address_csv:
                 if index == 0 and header:
                     header_row = row
-                    index += 1
-                    continue
+                else:
+                    # create new address, with checking
+                    new_address = Address(row, header_row=header_row)
+                    # add new address
+                    self.add_address(new_address)
 
                 index += 1
 
-                # create new address, with checking
-                new_address = Address(row, header_row=header_row)
-                # add new address
-                self.add_address(new_address)
-
+                # if needed terminate process after specified number of lines
                 if index == terminate_at:
                     break
 
