@@ -412,13 +412,24 @@ def cluster_one_user(user_id,
     """
     Cluster all the tweets of one user from a twitter dictionary.
 
-    :param user_id:         integer for twitter user_id
-    :param tweets_by_user:  a dictionary of user/list of tweets pairs. Output of create_dictionary_for_chunk
-    :param mongo_address:   pymongo connection to an address base
-    :param eps:             distance parameter for mongodb
-    :param min_points:      minimum number of points in a valid cluster
-    :return:                updates mongodb database/json document for user, with cluster info
+    :param user_id:         Twitter user_id.
+    :param tweets_by_user:  Dictionary of user/list of tweets pairs. Output of create_dictionary_for_chunk
+    :param mongo_address:   Pymongo connection parameters to an address base.
+    :param eps:             Distance parameter for naive DBScan clustering.
+    :param min_points:      Minimum number of points in a valid cluster.
+    :return:                Updates instructions for cluster_chunk to update mongodb database for user,
+                            with cluster info. False if user is above robot_threshold.
+
+    :type user_id           int
+    :type tweets_by_user    dict[int, list[]]
+    :type mongo_address     list[str] | tuple[str]
+    :type eps               int | float
+    :type min_points        int
+
+    :rtype                  list[list[]] | bool
     """
+
+    # set threshold for debugging
     debug_threshold = 300
 
     # grab all tweets of specific user
@@ -427,12 +438,15 @@ def cluster_one_user(user_id,
     if debug and len(all_tweets) > debug_threshold:
         print(user_id, len(all_tweets), datetime.now())
 
+    # check if user is robot
     if len(all_tweets) > robot_threshold:
         return False
 
     # create distance matrix
     p1_time = datetime.now()
+
     distance_array = distance_matrix(all_tweets)
+
     if debug and len(all_tweets) > debug_threshold:
         print(" ** matrix done in ", datetime.now() - p1_time)
 
@@ -444,7 +458,7 @@ def cluster_one_user(user_id,
 
     p2_time = datetime.now()
 
-    # mongo_info holder
+    # set up empty holder for new cluster information
     mongo_updates = []
 
     # do clustering till set is exhausted
@@ -461,6 +475,7 @@ def cluster_one_user(user_id,
             # find tweet ids to update
             tweet_ids_to_update = [tweet[0] for tweet in new_cluster]
 
+            # generate and store new update rule
             one_update_rule = [(tweet_ids_to_update[i], new_info, distances[i], len(all_tweets)) for i in
                                range(len(tweet_ids_to_update))]
             mongo_updates.append(one_update_rule)
@@ -472,14 +487,7 @@ def cluster_one_user(user_id,
             continue_clustering = False
 
     if debug and len(all_tweets) > debug_threshold:
-        print(" ** clustering done: ", len(all_tweets), datetime.now() - p2_time)
-
-    # for cluster in mongo_updates:
-    # for tweet_info in cluster:
-    # all_updates.find({"_id": tweet_info[0]}).update_one({"$set": {"cluster": tweet_info[1],
-    # "total_tweets_for_user": len(all_tweets),
-    # "tweet.distance_from_centroid": float(
-    #                                                                           tweet_info[2])}})
+        print(" ** clustering done for %06d tweets in: %s" % (len(all_tweets), datetime.now() - p2_time))
 
     return mongo_updates
 
@@ -490,20 +498,40 @@ def cluster_one_chunk(mongo_connection,
                       debug=False,
                       debug_user=-1,
                       graph_debug=False,
-                      return_csv=False):
+                      return_csv=False,
+                      sleep_for_cores=True):
     """
-    Cluster all the tweets for one chunk.
+    Cluster all the tweets for one chunk. Update all the tweets in the dictionary and return the number of users
+    in the chunk.
 
-    :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
-    :param mongo_address:       List of mongo parameters to address_base. [ip, database, collection]
+    :param mongo_connection:    Mongodb parameters to database of tweets. [ip, database, collection]
+    :param mongo_address:       Mongodb parameters to address_base. [ip, database, collection]
     :param chunk_id:            Chunk number.
-    :return:                    Number of users clustered.
+    :param debug:               Boolean for debugging.
+    :param debug_user:          A single user id to cluster only that user during debugging.
+    :param graph_debug:         Graphical debugging with matplotlib.
+    :param return_csv:          If true then returns the complete list of updates that were carried out.
+    :param sleep_for_cores:     If true then first 8 cores go to sleep for 30 sec before the process
+                                to allow more spread out mongo accesses in the clustering process.
+    :return:                    Number of users clustered or complete update list (see return_csv)
+
+    :type mongo_connection      list[str] | tuple[str]
+    :type mongo_address         list[str] | tuple[str]
+    :type chunk_id              int
+    :type debug                 bool
+    :type debug_user            int
+    :type graph_debug           bool
+    :type return_csv            bool
+    :rtype                      int | list[list[]]
     """
 
-    if chunk_id <= 8:
+    # send to sleep the first few cores.
+    if sleep_for_cores and chunk_id <= 8:
         print("core", chunk_id, "going to sleep for a bit...")
         time.sleep(30 * chunk_id)
         print("core", chunk_id, "finished sleep")
+
+    # keep track of performance
     start_time = datetime.now()
 
     # grab the data
@@ -512,11 +540,9 @@ def cluster_one_chunk(mongo_connection,
     if debug_user >= 0:
         tweets_by_user_dict = {debug_user: tweets_by_user_dict[debug_user]}
 
-    # # establish mongo connection
-    # destination = pymongo.MongoClient(mongo_connection[0], w=1)[mongo_connection[1]][mongo_connection[2]]
-    # bulk_updates = destination.initialize_unordered_bulk_op()
-
+    # initialise update holder
     mongo_updates = []
+
     # cluster each user
     for user_id in tweets_by_user_dict.keys():
         new_updates = cluster_one_user(user_id=user_id,
@@ -535,12 +561,17 @@ def cluster_one_chunk(mongo_connection,
 
         mongo_updates.append(new_updates)
 
-    print("***Starting updates ", chunk_id, "at: ", datetime.now(), mongo_connection)
+    print("***Starting updates %04d %s %s " % (chunk_id, datetime.now(), mongo_connection))
+
     p6_time = datetime.now()
-    # bulk_updates.execute()
+
+    # establish connection with server
     destination = pymongo.MongoClient(mongo_connection[0], w=0)[mongo_connection[1]][mongo_connection[2]]
+
+    # start bulk update object
     bulk_updates = destination.initialize_ordered_bulk_op()
 
+    # add each user to bulk process
     for user in mongo_updates:
         for cluster in user:
             for tweet_info in cluster:
@@ -548,17 +579,18 @@ def cluster_one_chunk(mongo_connection,
                                                                            "total_tweets_for_user": int(tweet_info[3]),
                                                                            "tweet.distance_from_centroid": float(
                                                                                tweet_info[2])}})
+    # execute bulk updates
     bulk_updates.execute()
 
-    if debug:
-        print("\nUpdates took: ", datetime.now() - p6_time)
-
-    print("  *******Finished ", chunk_id, "at: ", datetime.now(), "   in ", datetime.now() - start_time,
-          "  updates took: ", datetime.now() - p6_time)
-
+    print("  *******Finished %4d at: %s in %s, updates took: %s" % (chunk_id,
+                                                                    datetime.now(),
+                                                                    datetime.now() - start_time,
+                                                                    datetime.now() - p6_time))
+    # if specified then return the whole update rule list
     if return_csv:
         return mongo_updates
 
+    # send back number users clustered
     return len(tweets_by_user_dict)
 
 
