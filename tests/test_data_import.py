@@ -79,9 +79,6 @@ mongo_destination = (test_mongo[0], test_mongo[1], "address")
 #                                  mongo_connection=mongo_destination)
 
 
-data_tweet = [1396320050, 1938751584, "", "pt", "",	"London", "GB", "54.2", "-1.73","@whypyd e quem  A ento caralho?"]
+import ons_twitter.supporting_functions as func
 
-
-x = data_import.Tweet(data=data_tweet, method="csv")
-
-print(x)
+print(func.find_file_name("map/this_is_a.test.json"))

@@ -7,21 +7,28 @@ Python version: 3.4
 
 from os import path, makedirs
 
-# TODO comment and optimise supporting functions
 
 def find_file_extension(file_name):
     """
     Returns the extension of file_name supplied as string.
-    :param file_name: String of a file name.
-    :return:    File extension type as a string.
-    """
-    start_index = -1
-    found = 0
-    while found >= 0:
-        found = file_name.find(".", start_index + 1)
-        if found >= 0:
-            start_index = found
 
+    :param file_name:   File name.
+    :return:            File extension type as a string. Eg: .csv, .json
+
+    :type file_name     str
+    :rtype              str
+    """
+
+    # set start index so that if no extension is found then return the whole filename
+    start_index = 0
+
+    # look for the last dot in the file name
+    for i in range(len(file_name)-1, 0, -1):
+        if file_name[i] == ".":
+            start_index = i
+            break
+
+    # return file extension
     return file_name[start_index:]
 
 
@@ -32,12 +39,16 @@ def find_file_name(file_name):
     :return: Tuple of (folder, file)
     Example: data/input/test.csv -> data/input/, test.csv
     """
-    start_index = -1
-    found = 0
-    while found >= 0:
-        found = file_name.find("/", start_index + 1)
-        if found >= 0:
-            start_index = found
+
+    #TODO continue from here
+    # set start index so that if no extension is found then return the whole filename
+    start_index = 0
+
+    # look for the last / in the file name
+    for i in range(len(file_name)-1, 0, -1):
+        if file_name[i] == "/":
+            start_index = i
+            break
     return file_name[:start_index + 1], file_name[(start_index + 1):]
 
 
