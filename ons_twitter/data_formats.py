@@ -10,6 +10,7 @@ from json import load, dump
 from csv import reader
 from datetime import datetime
 from os.path import isfile
+from pprint import pprint
 
 from bson.son import SON
 from osgeo import ogr, osr
@@ -20,8 +21,6 @@ from ons_twitter.supporting_functions import create_folder
 
 
 class Tweet(object):
-
-    # TODO comment and optimise Tweet object
     """
     Tweet class that contains a JSON object of tweet information.
     """
@@ -33,9 +32,15 @@ class Tweet(object):
         :param data:    Information to initialise the Tweet. Can be a list of variables (csv input) or a dictionary from
                         from Twitter API input.
         :param method:  Can hold 3 values: None, "csv", "json". None sets up empty Tweet object with NAs, csv expects
-                        data to be a list, while json expects data to be dictionary from Twitter API/GNIP.
+                        data to be a list, while json expects data to be in a dictionary from Twitter API/GNIP.
         :return:        Twitter object. Check .get_error() to see any errors.
+
+        :type data:     dict[str, dict] | list[] | tuple[] | None
+        :type method:   None | str
+        :rtype          Tweet
         """
+
+        # initialise empty variables
         self.error_number = 0
         self.error_description = []
 
@@ -98,6 +103,7 @@ class Tweet(object):
                 self.dictionary["tweet"]["text"] = data[9].replace('"', "")
                 self.dictionary["chunk_id"] = self.dictionary["user_id"] % 1000
                 if wrong_data_conversion:
+                    # correction was successful
                     self.error_number = 2
             except ValueError:
                 self.error_number = -1
@@ -106,10 +112,10 @@ class Tweet(object):
                     # no geo found, even after row correction
                     self.error_number = 3
                 else:
-                    # no geo found and there were no problems with row
+                    # no geo found and there were no problems
                     self.error_number = 1
 
-            # handle missing coordinates
+            # log geo coordinates if any
             try:
                 self.dictionary["tweet"]["lat_long"] = (float(data[7]), float(data[8]))
                 self.dictionary["tweet"]["coordinates"] = lat_long_to_osgb(
@@ -125,9 +131,11 @@ class Tweet(object):
             self.dictionary["_id"] = str(self.dictionary["user_id"]) + "_" + str(self.dictionary["unix_time"])
 
         elif method == "json":
+            assert type(data) is dict, "Data must be a dictionary for json method"
             self.dictionary = empty_dictionary
 
-            # check if info is in dictionary, this indicates that this is only the end of file twitter API info
+            # check if info key is in dictionary, this indicates that this is only the end of file
+            # twitter API info
             if "info" in data.keys():
                 self.error_number = 5
             else:
@@ -168,29 +176,34 @@ class Tweet(object):
 
     def get_errors(self, print_status=False):
         """
-        Method for checking error status of Tweet object.
+        Return the errors of Tweet object.
 
-        :param print_status:
-        :return: Integer:   0 = "No errors",
-                            1 = "no geo-location",
-                            2 = "Wrong lat-long but conversion was successful",
-                            3 = "Wrong lat-long and conversion was NOT successful",
-                            5 = "End of file of GNIP output",
-                            -1 = "Any other error"
+        :param print_status:    Print strings of error description.
+        :return:                0 = "No errors",
+                                1 = "no geo-location",
+                                2 = "Wrong lat-long but conversion was successful",
+                                3 = "Wrong lat-long and conversion was NOT successful",
+                                5 = "End of file of GNIP output",
+                                -1 = "Any other error"
+
+        :type print_status      bool
+        :rtype                  int
         """
 
+        # print human readable errors if requested
         if print_status:
             print(self.error_description)
+
         return self.error_number
 
-    def get_info(self):
+    def __str__(self):
         """
-        Method for pretty printing tweets.
+        Pretty print tweets.
         """
 
-        from pprint import pprint
+        pprint(vars(self))
 
-        pprint(self.dictionary)
+        return ', '.join("{!s}:{!r}".format(key, val) for (key, val) in self.dictionary.items())
 
     def generate_time_input(self):
         """"
@@ -223,8 +236,14 @@ class Tweet(object):
     def find_tweet_address(self, mongo_connection):
         """
         Finds the closest address point to the tweet from geo-indexed mongodb address base.
-        :param mongo_connection: Geo-index mongodb collection.
-        :return: 1 if address is found, 0 if no address is found within 300m of tweet. 2 for any other errors
+
+        :param mongo_connection:    Geo-index mongodb collection. From pymongo.
+        :return:                    1: address is found
+                                    0: no address is found within 300m of tweet
+                                    2: any other errors, connection error
+
+        :type mongo_connection:     pymongo.collection.Collection
+        :rtype                      int
         """
         # construct query
         query = {"coordinates": SON([("$near", self.dictionary["tweet"]["coordinates"]),
@@ -252,18 +271,19 @@ class Tweet(object):
                 closest_address_list[0]["coordinates"])
             return 0
 
-    def add_cluster_info(self, cluster_data):
-        pass
-
     def get_country_code(self):
         """
         Return the country code from the tweet. If non-GB then handle as special.
+
+        :rtype      str
         """
         return self.dictionary["tweet"]["country"]
 
     def get_csv_format(self):
         """
         Return tweet as original csv row.
+
+        :rtype      list
         """
         csv_row = [self.dictionary["unix_time"],
                    self.dictionary["user_id"],

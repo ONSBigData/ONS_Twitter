@@ -63,13 +63,13 @@ mongo_destination = (test_mongo[0], test_mongo[1], "address")
 
 
 # initialise AddressBase object
-address_base = AddressBase(folder_name=address_json_folder,
-                           chunk_size=1000,
-                           over_write_previous=True)
-
-# feed csv file into address_base to convert into json files, insert_list will be a list of json filenames
-insert_list = address_base.import_address_csv(input_file_location=address_base_csv_location,
-                                              terminate_at=-1)
+# address_base = AddressBase(folder_name=address_json_folder,
+#                            chunk_size=1000,
+#                            over_write_previous=True)
+#
+# # feed csv file into address_base to convert into json files, insert_list will be a list of json filenames
+# insert_list = address_base.import_address_csv(input_file_location=address_base_csv_location,
+#                                               terminate_at=-1)
 
 # indicate end of slicing
 
@@ -77,3 +77,11 @@ insert_list = address_base.import_address_csv(input_file_location=address_base_c
 # # import each small file into mongodb database
 # number_files = insert_json_mongo(folder_name=address_json_folder,
 #                                  mongo_connection=mongo_destination)
+
+
+data_tweet = [1396320050, 1938751584, "", "pt", "",	"London", "GB", "54.2", "-1.73","@whypyd e quem  A ento caralho?"]
+
+
+x = data_import.Tweet(data=data_tweet, method="csv")
+
+print(x)
