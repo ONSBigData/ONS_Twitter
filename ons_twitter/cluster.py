@@ -611,6 +611,7 @@ def cluster_all(mongo_connection,
     :type mongo_connection      list | tuple
     """
 
+    # TODO continue from here
     # decide on parallel mongodb lookup
 
     if parallel:
