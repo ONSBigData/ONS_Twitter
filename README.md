@@ -38,7 +38,8 @@ The following list of non-standard Python modules are used:
     * Pandas
     
 #### Database configuration ####
-For instructions on how to set up the mongodb servers see mongodb.md.    
+For instructions on how to set up the mongodb servers see mongodb.md. In the mongodb folder. These are specific
+instructions for the ONS environment so you will have to make changes there.
     
 #### Deployment instructions ####
 How to install GDAL on windows:  
