@@ -602,19 +602,20 @@ def cluster_all(mongo_connection,
                 num_cores=-1):
     """
     Cluster all tweets found in collection.
+
     :param mongo_connection:    List of mongo parameters to database of tweets. [ip, database, collection]
-    :param mongo_address:       List of mongo parameters to address_base. [ip, database, collection]
+    :param mongo_address:       List of mongo parameters to address_base(s). [ip, database, collection]
     :param chunk_range:         Optional range for chunk ids to cluster.
     :return:                    Number of users clustered.
 
     :type mongo_address         list | tuple
     :type mongo_connection      list | tuple
+    :rtype                      int
     """
 
-    # TODO continue from here
     # decide on parallel mongodb lookup
-
     if parallel:
+        # check whether more than one address base is supplied
         if type(mongo_address[0]) is str:
             all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(mongo_connection,
                                                                               mongo_address,
@@ -630,7 +631,7 @@ def cluster_all(mongo_connection,
 
             print("*****\n")
 
-            # create an iterable
+            # construct iterable for parallel address lookup
             dummy_mongo = mongo_address * ((len(chunk_range) // len(mongo_address)) + 1)
             dummy_mongo = dummy_mongo[:len(chunk_range)]
             mongo_chunk_iter = []
@@ -643,30 +644,30 @@ def cluster_all(mongo_connection,
                 mongo_chunk_iter.append((dummy_mongo_servers[i], address_param, chunk_range[i]))
                 i += 1
 
-            # call parallel
+            # call parallel clustering with multiple address bases
             all_users = Parallel(n_jobs=num_cores)(delayed(cluster_one_chunk)(param_collection[0],
                                                                               param_collection[1],
                                                                               param_collection[2],
                                                                               debug)
                                                    for param_collection in mongo_chunk_iter)
+    # if clustering is not to be run in parallel then do a simple clustering
     else:
         print("doing it in serial")
         all_users = 0
 
+        # warn user that only first address base will be used
         if type(mongo_address[0]) is not str:
             mongo_address = mongo_address[0]
             print("Using only 1st address base: ", mongo_address)
 
-        if type(mongo_connection[0]) is not str:
-            mongo_connection = mongo_connection[0]
-            print("Using only 1st mongo_server: ", mongo_connection)
-
+        # cluster all the chunks
         for index_num in chunk_range:
             all_users += cluster_one_chunk(mongo_connection,
                                            mongo_address,
                                            index_num,
                                            debug)
 
+            # create list so that sum will work
             all_users = [0, all_users]
 
     return sum(all_users)
