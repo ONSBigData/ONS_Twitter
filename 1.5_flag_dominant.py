@@ -1,14 +1,15 @@
 """
-Description:
-    Look at users' languages in the Twitter data by geography.
-Author: Bence Komarniczky
-Date: 02/06/2015
+Description:    Flag the dominant cluster of each user. The dominant cluster is the most populous
+                residential cluster for each user.
+Author:         Bence Komarniczky
+Date:           02/06/2015
 Python version: 3.4
 """
 
 from datetime import datetime
+
 import pymongo
-from joblib import Parallel,delayed
+from joblib import Parallel, delayed
 
 
 # establish mongo connection
@@ -39,10 +40,9 @@ def find_and_update_dominant_clusters(chunk_id):
     print("Starting inserts for chunk: %3.d at %s number of dominant clusters: %4.d" % (chunk_id,
                                                                                         str(datetime.now()),
                                                                                         len(by_cluster_list)))
-    # execute command
+    # execute updates
     bulk.execute()
     print("Finished inserts for chunk: %3.d at %s" % (chunk_id, str(datetime.now())))
-
 
 # do updates in parallel
 Parallel(n_jobs=-1)(delayed(find_and_update_dominant_clusters)(chunk_id) for chunk_id in range(1000))

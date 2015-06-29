@@ -40,8 +40,6 @@ The following list of non-standard Python modules are used:
 #### Database configuration ####
 For instructions on how to set up the mongodb servers see mongodb.md.    
     
-#### How to run tests ####
-    ...
 #### Deployment instructions ####
 How to install GDAL on windows:  
 Download GDAL from [Unofficial Windows Libraries](http://www.lfd.uci.edu/~gohlke/pythonlibs/#gdal)  

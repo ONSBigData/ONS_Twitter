@@ -1,13 +1,14 @@
 """
 Description:    Take out all the robots from the database that have been found so far and move them
                 to a new collection called robots.
-Author: Bence Komarniczky
-Date:   08/06/2015
+Author:         Bence Komarniczky
+Date:           08/06/2015
 Python version: 3.4
 """
 
 import csv
 from datetime import datetime
+
 import numpy as np
 import pymongo
 from joblib import delayed, Parallel
@@ -26,9 +27,9 @@ def read_one_file(file_path, user_col):
     """
     Read one csv file, containing robot user_ids and add to the
     set of global robots.
-    :param file_path: Pointer to file.
-    :param user_col: Pythonian index of csv column containing user_ids.
-    :return: nothing
+    :param file_path:   Pointer to file.
+    :param user_col:    Pythonian index of csv column containing user_ids.
+    :return:            Nothing. Will append to robot list
     """
     global robot_list
 
@@ -57,10 +58,15 @@ db_robots = ("192.168.0.99:30000", "twitter", "robots")
 def move_one_user(user_id, from_data_base=db, to_data_base=db_robots):
     """
     Move one user to the new robots database.
-    :param user_id: user id of robot user
-    :param from_data_base: source database
-    :param to_data_base: destination database
-    :return: number of tweets moved
+    :param user_id:         user id of robot user
+    :param from_data_base:  source database
+    :param to_data_base:    destination database
+    :return:                number of tweets moved
+
+    :type user_id           int
+    :type from_data_base    tuple[str] | list[str]
+    :type to_data_base      tuple[str] | list[str]
+    :rtype                  int
     """
 
     # assert input types

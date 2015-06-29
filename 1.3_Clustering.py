@@ -7,6 +7,7 @@ Python version: 3.4
 """
 
 from datetime import datetime
+
 import ons_twitter.cluster as cl
 
 
@@ -14,17 +15,19 @@ import ons_twitter.cluster as cl
 start_time = datetime.now()
 print("Starting clustering: ", start_time, "\n")
 
-# specify databases
-
+# specify mongodb databases
 mongo_address = ("192.168.0.98:30001", "twitter", "address")
 
 twitter_data = ("192.168.0.99:30000", "twitter", "tweets")
 
 # start clustering
-user_no = cl.cluster_all(twitter_data, mongo_address,
-                         parallel=True, debug=False, num_cores=-1)
+user_no = cl.cluster_all(twitter_data,
+                         mongo_address,
+                         parallel=True,
+                         debug=False,
+                         num_cores=-1)
 
-# give info
+# print information at the end
 print("\n  ****\nFinished clustering at: ", datetime.now(),
-      "\n in: ", datetime.now()-start_time,
+      "\n in: ", datetime.now() - start_time,
       "\n Found users:", user_no)
