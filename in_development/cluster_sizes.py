@@ -12,7 +12,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 # set the number of chunks to process / for debugging
-CHUNKS_TO_PROCESS = 5
+CHUNKS_TO_PROCESS = 1000
 
 
 def get_dist_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "tweets")):
@@ -25,7 +25,7 @@ def get_dist_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "t
                                  {"$group": {"_id": "$cluster.cluster_id", "size": {"$first": "$cluster.count"}}},
                                  {"$group": {"_id": "total_dominant",
                                              "cluster_sizes": {"$push": "$size"}}}
-                                 ])["result"]
+                                 ])
 
 
     cluster_dist = list(cluster_dist)
@@ -36,6 +36,8 @@ def get_dist_one_chunk(chunk_id, connection=("192.168.0.99:30000", "twitter", "t
 
     count_dist.columns = ["count"]
     count_dist.sort_index(inplace=True)
+
+    print("Finished querying chunk: %3.d at: %s in %s" % (chunk_id, datetime.now(), datetime.now() - start_time))
 
     return count_dist
 
