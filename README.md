@@ -58,3 +58,6 @@ The other packages are more or less straightforward to install, especially on li
 * Project originator: Bence Komarniczky |  niczky12@gmail.com | [linkedIn](https://uk.linkedin.com/in/bencekomarniczky)
 * Project lead: Nigel Swier | nigel.swier@ons.gov.uk
 * Or someone at the BigData team: onsbigdata@gmail.com
+
+### License
+This repository and all of its code is under Open Government Licence. For more information see LICENCE.pdf file.
